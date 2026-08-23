@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -163,7 +164,7 @@ fun TileBox(modifier: Modifier, t: TileState, selected: Boolean, onSelect: () ->
                 }
             }
             .pointerInput(t) {
-                detectTapGesturesCompat { onSelect() }
+                detectTapGestures(onTap = { onSelect() })
             }
     ) {
         if (t.uri != null) {
@@ -188,10 +189,6 @@ fun TileBox(modifier: Modifier, t: TileState, selected: Boolean, onSelect: () ->
     }
 }
 
-/** Simple tap detector to avoid clashing with transform gestures. */
-suspend fun androidx.compose.ui.input.pointer.PointerInputScope.detectTapGesturesCompat(onTap: () -> Unit) {
-    androidx.compose.foundation.gestures.detectTapGestures(onTap = { onTap() })
-}
 
 /** Renders the 2048x2048 collage from the tile states. */
 fun renderCollage(ctx: android.content.Context, tiles: List<TileState>): Bitmap? {
