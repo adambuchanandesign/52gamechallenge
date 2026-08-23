@@ -11,10 +11,19 @@ android {
         applicationId = "com.gc52.tracker"
         minSdk = 26
         targetSdk = 34
-        versionCode = 3
-        versionName = "0.3"
+        versionCode = 4
+        versionName = "0.4"
+    }
+    signingConfigs {
+        create("shared") {
+            storeFile = rootProject.file("keystore/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
     }
     buildTypes {
+        getByName("debug") { signingConfig = signingConfigs.getByName("shared") }
         release { isMinifyEnabled = false }
     }
     compileOptions {

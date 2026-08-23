@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.ViewList
+import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -39,10 +40,18 @@ fun GamesScreen(vm: AppViewModel, nav: NavHostController) {
             Text("Games", color = Cream, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
             Text("${games.size}", color = LogoBlueLight, fontWeight = FontWeight.Bold)
             IconButton(onClick = {
-                vm.filters.value = filters.copy(view = if (filters.view == ViewMode.LIST) ViewMode.GRID else ViewMode.LIST)
+                vm.filters.value = filters.copy(view = when (filters.view) {
+                    ViewMode.LIST -> ViewMode.GRID
+                    ViewMode.GRID -> ViewMode.LARGE
+                    ViewMode.LARGE -> ViewMode.LIST
+                })
             }) {
                 Icon(
-                    if (filters.view == ViewMode.LIST) Icons.Filled.GridView else Icons.Filled.ViewList,
+                    when (filters.view) {
+                        ViewMode.LIST -> Icons.Filled.GridView
+                        ViewMode.GRID -> Icons.Filled.ViewAgenda
+                        ViewMode.LARGE -> Icons.Filled.ViewList
+                    },
                     "Toggle view", tint = LogoBlueLight
                 )
             }
@@ -82,6 +91,11 @@ fun GamesScreen(vm: AppViewModel, nav: NavHostController) {
         if (filters.view == ViewMode.LIST) {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxSize()) {
                 items(games, key = { it.id }) { g -> GameRow(g) { nav.navigate("detail/${g.id}") } }
+                item { Spacer(Modifier.height(16.dp)) }
+            }
+        } else if (filters.view == ViewMode.LARGE) {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxSize()) {
+                items(games, key = { it.id }) { g -> GameLargeCell(g) { nav.navigate("detail/${g.id}") } }
                 item { Spacer(Modifier.height(16.dp)) }
             }
         } else {

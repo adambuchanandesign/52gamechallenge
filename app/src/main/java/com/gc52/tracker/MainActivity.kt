@@ -61,6 +61,7 @@ fun AppNav(nav: NavHostController) {
             AddScreen(vm, nav, pid)
         }
         composable("stats") { StatsScreen(vm, nav) }
+        composable("playing") { PlayingScreen(vm, nav) }
         composable("collage/{id}") { back ->
             val id = back.arguments?.getString("id")?.toLongOrNull() ?: return@composable
             CollageScreen(vm, nav, id)
@@ -126,6 +127,37 @@ fun GameRow(g: Game, onClick: () -> Unit) {
             )
         }
         g.date?.let { Text(it.take(10), color = Muted, fontSize = 11.sp) }
+    }
+}
+
+@Composable
+fun GameLargeCell(g: Game, onClick: () -> Unit) {
+    val ctx = LocalContext.current
+    val uri = remember(g.id) { Storage.imageUri(ctx, g.year, g.imageFile) }
+    Column(
+        modifier = Modifier.fillMaxWidth().gradientCard().clickable(onClick = onClick).padding(8.dp)
+    ) {
+        Box(
+            modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(12.dp)).background(Surface2),
+            contentAlignment = Alignment.Center
+        ) {
+            if (uri != null) {
+                AsyncImage(
+                    model = uri, contentDescription = g.name,
+                    contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()
+                )
+            } else PlatformIcon(g.platform, 64)
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            PlatformIcon(g.platform, 28)
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(g.name, color = Cream, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                Text("${g.platform} · ${g.year} · ${g.seq}/52", color = Muted, fontSize = 12.sp, maxLines = 1)
+            }
+            g.date?.let { Text(it.take(10), color = Muted, fontSize = 11.sp) }
+        }
     }
 }
 

@@ -74,7 +74,7 @@ fun StatsScreen(vm: AppViewModel, nav: NavHostController) {
                 Spacer(Modifier.height(10.dp))
                 val max = (yearCounts.maxOfOrNull { it.n } ?: 1).coerceAtLeast(1)
                 Row(
-                    Modifier.fillMaxWidth().height(130.dp),
+                    Modifier.fillMaxWidth().height(158.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.Bottom
                 ) {

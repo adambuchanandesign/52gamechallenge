@@ -15,7 +15,7 @@ import java.time.temporal.WeekFields
 import java.util.Locale
 
 enum class SortMode { NEWEST, OLDEST, AZ }
-enum class ViewMode { LIST, GRID }
+enum class ViewMode { LIST, GRID, LARGE }
 
 data class Filters(
     val sort: SortMode = SortMode.NEWEST,
