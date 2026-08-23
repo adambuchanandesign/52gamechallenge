@@ -30,6 +30,7 @@ import com.gc52.tracker.data.Game
 import com.gc52.tracker.data.PlatformIcons
 import com.gc52.tracker.data.Storage
 import com.gc52.tracker.ui.screens.*
+import androidx.compose.material3.HorizontalDivider
 import com.gc52.tracker.ui.theme.*
 
 class MainActivity : ComponentActivity() {
@@ -122,11 +123,24 @@ fun GameRow(g: Game, onClick: () -> Unit) {
         Column(Modifier.weight(1f)) {
             Text(g.name, color = Cream, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1)
             Text(
-                "${g.platform} · ${g.year} · ${g.seq}/52" + if (g.replay) " · replay" else "",
+                "${g.platform} · ${g.year}" + if (g.replay) " · replay" else "",
                 color = Muted, fontSize = 12.sp, maxLines = 1
             )
         }
-        g.date?.let { Text(it.take(10), color = Muted, fontSize = 11.sp) }
+        Column(horizontalAlignment = Alignment.End) {
+            Text("${g.seq}/52", color = LogoBlueLight, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            g.date?.let { Text(it.take(10), color = Muted, fontSize = 11.sp) }
+        }
+    }
+}
+
+@Composable
+fun YearDivider(year: Int) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        HorizontalDivider(modifier = Modifier.weight(1f), color = Muted.copy(alpha = 0.25f))
+        Text("$year", color = LogoBlueLight, fontWeight = FontWeight.Bold, fontSize = 15.sp,
+            modifier = Modifier.padding(horizontal = 12.dp))
+        HorizontalDivider(modifier = Modifier.weight(1f), color = Muted.copy(alpha = 0.25f))
     }
 }
 
@@ -154,9 +168,12 @@ fun GameLargeCell(g: Game, onClick: () -> Unit) {
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(g.name, color = Cream, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                Text("${g.platform} · ${g.year} · ${g.seq}/52", color = Muted, fontSize = 12.sp, maxLines = 1)
+                Text("${g.platform} · ${g.year}", color = Muted, fontSize = 12.sp, maxLines = 1)
             }
-            g.date?.let { Text(it.take(10), color = Muted, fontSize = 11.sp) }
+            Column(horizontalAlignment = Alignment.End) {
+                Text("${g.seq}/52", color = LogoBlueLight, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                g.date?.let { Text(it.take(10), color = Muted, fontSize = 11.sp) }
+            }
         }
     }
 }
@@ -182,5 +199,7 @@ fun GameGridCell(g: Game, onClick: () -> Unit) {
         Spacer(Modifier.height(6.dp))
         Text(g.name, color = Cream, fontSize = 12.sp, maxLines = 1, fontWeight = FontWeight.Medium)
         Text("${g.year} · ${g.platform}", color = Muted, fontSize = 10.sp, maxLines = 1)
+        Text("${g.seq}/52", color = LogoBlueLight, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        g.date?.let { Text(it.take(10), color = Muted, fontSize = 9.sp) }
     }
 }

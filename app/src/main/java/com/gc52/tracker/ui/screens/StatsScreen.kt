@@ -1,6 +1,7 @@
 package com.gc52.tracker.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.gc52.tracker.AppViewModel
+import com.gc52.tracker.Filters
 import com.gc52.tracker.data.Game
 import com.gc52.tracker.ui.theme.*
 
@@ -101,7 +103,7 @@ fun StatsScreen(vm: AppViewModel, nav: NavHostController) {
             Column(Modifier.fillMaxWidth().gradientCard().padding(14.dp)) {
                 Text("Eras you play most", color = LogoBlueLight, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(8.dp))
-                val total = all.size.coerceAtLeast(1)
+                val eraMax = (eras.maxOfOrNull { it.second } ?: 1).coerceAtLeast(1)
                 eras.forEach { (era, n) ->
                     Row(Modifier.padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(era, color = Cream, fontSize = 13.sp, modifier = Modifier.width(120.dp))
@@ -109,7 +111,7 @@ fun StatsScreen(vm: AppViewModel, nav: NavHostController) {
                             Modifier.weight(1f).height(10.dp).clip(RoundedCornerShape(5.dp)).background(Surface2)
                         ) {
                             Box(
-                                Modifier.fillMaxHeight().fillMaxWidth(n.toFloat() / total)
+                                Modifier.fillMaxHeight().fillMaxWidth(n.toFloat() / eraMax)
                                     .clip(RoundedCornerShape(5.dp)).background(AccentGradient)
                             )
                         }
@@ -151,27 +153,23 @@ fun StatsScreen(vm: AppViewModel, nav: NavHostController) {
             }
         }
 
-        // Fun facts
+        // Fun facts — its own section, one mini block per fact
+        item { Text("Fun facts", color = Cream, fontWeight = FontWeight.Bold, fontSize = 17.sp) }
         item {
-            val byDate = all.filter { it.date != null }.sortedBy { it.date }
-            val monthNames = listOf("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")
-            val busiestMonth = byDate.groupingBy { it.date!!.substring(5, 7) }.eachCount()
-                .maxByOrNull { it.value }
-            val milestones = listOf(100, 250, 500, 750, 1000).mapNotNull { m ->
-                all.sortedWith(compareBy({ it.year }, { it.seq })).getOrNull(m - 1)?.let { g -> m to g }
-            }
-            Column(Modifier.fillMaxWidth().gradientCard().padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Fun facts", color = LogoBlueLight, fontWeight = FontWeight.Bold)
-                byDate.firstOrNull()?.let { Text("First logged: ${it.name} — ${it.date!!.take(10)}", color = Cream, fontSize = 13.sp) }
-                byDate.lastOrNull()?.let { Text("Most recent: ${it.name} — ${it.date!!.take(10)}", color = Cream, fontSize = 13.sp) }
-                busiestMonth?.let {
-                    Text("Busiest month overall: ${monthNames[it.key.toInt() - 1]} (${it.value} games)", color = Cream, fontSize = 13.sp)
+            val facts = remember(all) { buildFacts(all, platformCounts.size) }
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                facts.chunked(2).forEach { pair ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        pair.forEach { (label, value) ->
+                            Column(Modifier.weight(1f).gradientCard().padding(12.dp)) {
+                                Text(label, color = LogoBlueLight, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                Text(value, color = Cream, fontSize = 13.sp,
+                                    modifier = Modifier.padding(top = 3.dp))
+                            }
+                        }
+                        if (pair.size == 1) Spacer(Modifier.weight(1f))
+                    }
                 }
-                milestones.forEach { (m, g) ->
-                    Text("Game #$m: ${g.name} (${g.platform}, ${g.year})", color = Cream, fontSize = 13.sp)
-                }
-                Text("Distinct platforms: ${platformCounts.size}", color = Cream, fontSize = 13.sp)
-                Text("Total beaten: ${all.size}", color = Cream, fontSize = 13.sp)
             }
         }
 
@@ -179,7 +177,12 @@ fun StatsScreen(vm: AppViewModel, nav: NavHostController) {
         item { Text("All platforms", color = Cream, fontWeight = FontWeight.Bold, fontSize = 16.sp) }
         items(platformCounts) { pc ->
             Row(
-                Modifier.fillMaxWidth().gradientCard().padding(horizontal = 14.dp, vertical = 8.dp),
+                Modifier.fillMaxWidth().gradientCard()
+                    .clickable {
+                        vm.filters.value = Filters(platform = pc.platform)
+                        nav.navigate("games")
+                    }
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 com.gc52.tracker.PlatformIcon(pc.platform, 26)
@@ -190,4 +193,53 @@ fun StatsScreen(vm: AppViewModel, nav: NavHostController) {
         }
         item { Spacer(Modifier.height(16.dp)) }
     }
+}
+
+private fun buildFacts(all: List<Game>, platformCount: Int): List<Pair<String, String>> {
+    val facts = ArrayList<Pair<String, String>>()
+    val monthNames = listOf("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")
+    val dated = all.mapNotNull { g ->
+        g.date?.take(10)?.let { d ->
+            runCatching { java.time.LocalDate.parse(d) }.getOrNull()?.let { g to it }
+        }
+    }.sortedBy { it.second }
+
+    dated.firstOrNull()?.let { (g, d) -> facts.add("First logged" to "${g.name} — $d") }
+    dated.lastOrNull()?.let { (g, d) -> facts.add("Most recent" to "${g.name} — $d") }
+
+    val byYear = all.groupingBy { it.year }.eachCount()
+    byYear.maxByOrNull { it.value }?.let { facts.add("Best year" to "${it.key} (${it.value} games)") }
+
+    if (dated.isNotEmpty()) {
+        dated.groupingBy { it.second }.eachCount().maxByOrNull { it.value }?.let { (day, n) ->
+            if (n > 1) facts.add("Busiest day" to "$day ($n games!)")
+        }
+        dated.groupingBy { it.second.dayOfWeek }.eachCount().maxByOrNull { it.value }?.let { (dow, n) ->
+            facts.add("Favourite day" to dow.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.UK) + " ($n games)")
+        }
+        dated.groupingBy { it.second.monthValue }.eachCount().maxByOrNull { it.value }?.let { (m, n) ->
+            facts.add("Busiest month" to "${monthNames[m - 1]} ($n games)")
+        }
+        val gap = dated.zipWithNext().maxByOrNull { (a, b) ->
+            java.time.temporal.ChronoUnit.DAYS.between(a.second, b.second)
+        }
+        gap?.let { (a, b) ->
+            val days = java.time.temporal.ChronoUnit.DAYS.between(a.second, b.second)
+            if (days > 1) facts.add("Longest drought" to "$days days (${a.first.name} → ${b.first.name})")
+        }
+        val first = dated.first().second
+        val last = dated.last().second
+        val weeks = (java.time.temporal.ChronoUnit.DAYS.between(first, last) / 7.0).coerceAtLeast(1.0)
+        facts.add("Lifetime pace" to String.format(java.util.Locale.UK, "%.1f games/week", all.size / weeks))
+    }
+
+    val ordered = all.sortedWith(compareBy({ it.year }, { it.seq }))
+    listOf(100, 250, 500, 750, 1000).forEach { m ->
+        ordered.getOrNull(m - 1)?.let { g -> facts.add("Game #$m" to "${g.name} (${g.platform}, ${g.year})") }
+    }
+    val replays = all.count { it.replay }
+    if (replays > 0) facts.add("Replays logged" to "$replays")
+    facts.add("Distinct platforms" to "$platformCount")
+    facts.add("Total beaten" to "${all.size}")
+    return facts
 }

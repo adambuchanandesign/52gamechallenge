@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
@@ -88,14 +89,29 @@ fun GamesScreen(vm: AppViewModel, nav: NavHostController) {
             )
         }
 
+        val dividers = filters.sort != SortMode.AZ
         if (filters.view == ViewMode.LIST) {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxSize()) {
-                items(games, key = { it.id }) { g -> GameRow(g) { nav.navigate("detail/${g.id}") } }
+                var lastYear: Int? = null
+                games.forEach { g ->
+                    if (dividers && g.year != lastYear) {
+                        lastYear = g.year
+                        item(key = "hd${g.year}") { YearDivider(g.year) }
+                    }
+                    item(key = g.id) { GameRow(g) { nav.navigate("detail/${g.id}") } }
+                }
                 item { Spacer(Modifier.height(16.dp)) }
             }
         } else if (filters.view == ViewMode.LARGE) {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxSize()) {
-                items(games, key = { it.id }) { g -> GameLargeCell(g) { nav.navigate("detail/${g.id}") } }
+                var lastYear: Int? = null
+                games.forEach { g ->
+                    if (dividers && g.year != lastYear) {
+                        lastYear = g.year
+                        item(key = "hd${g.year}") { YearDivider(g.year) }
+                    }
+                    item(key = g.id) { GameLargeCell(g) { nav.navigate("detail/${g.id}") } }
+                }
                 item { Spacer(Modifier.height(16.dp)) }
             }
         } else {
@@ -105,7 +121,14 @@ fun GamesScreen(vm: AppViewModel, nav: NavHostController) {
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(games, key = { it.id }) { g -> GameGridCell(g) { nav.navigate("detail/${g.id}") } }
+                var lastYear: Int? = null
+                games.forEach { g ->
+                    if (dividers && g.year != lastYear) {
+                        lastYear = g.year
+                        item(key = "hd${g.year}", span = { GridItemSpan(maxLineSpan) }) { YearDivider(g.year) }
+                    }
+                    item(key = g.id) { GameGridCell(g) { nav.navigate("detail/${g.id}") } }
+                }
             }
         }
     }

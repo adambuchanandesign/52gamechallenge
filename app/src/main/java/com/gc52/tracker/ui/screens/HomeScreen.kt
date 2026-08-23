@@ -61,13 +61,16 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
         // Clickable stat cards
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatCard(Modifier.weight(1f), "$total", "games beaten", null) { openGames() }
+                val range = if (yearCounts.isNotEmpty())
+                    "${yearCounts.minOf { it.year }} – ${yearCounts.maxOf { it.year }}" else ""
+                StatCard(Modifier.weight(1f), "$total", "games beaten",
+                    if (range.isNotEmpty()) range to true else null, "🏆") { openGames() }
                 val year = LocalDate.now().year
                 val paceLine =
                     if (pace.diff < 0) "(${-pace.diff} behind pace)" else "(${pace.diff} ahead of pace)"
                 StatCard(
                     Modifier.weight(1f), "${pace.count}/52", "$year · week ${pace.week}",
-                    paceLine to (pace.diff < 0)
+                    paceLine to (pace.diff < 0), "📅"
                 ) { openGames(year = year) }
             }
         }
@@ -79,6 +82,11 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
             }
         }
 
+        // ---- Have I beaten this? ----
+        item { H1("Have I beaten this?") }
+        item { BeatenSearch(vm) }
+        searchResults(vm, nav)
+
         // ---- Now playing ----
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -86,8 +94,6 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
                 TextButton(onClick = { showAddPlaying = true }) { Text("+ Add", color = LogoBlueLight) }
             }
         }
-        item { BeatenSearch(vm) }
-        searchResults(vm, nav)
         if (playing.isEmpty()) {
             item {
                 Text("Nothing on the go — add what you're partway through so you don't forget.",
@@ -107,24 +113,8 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
             }
         }
 
-        // ---- Stats ----
-        item { H1("Stats") }
-        item { H2("Most beaten platforms") }
-        items(platformCounts.take(5)) { pc ->
-            Row(
-                Modifier.fillMaxWidth().gradientCard()
-                    .clickable { openGames(platform = pc.platform) }
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                PlatformIcon(pc.platform, 28)
-                Spacer(Modifier.width(10.dp))
-                Text(pc.platform, color = Cream, modifier = Modifier.weight(1f), fontSize = 14.sp)
-                Text("${pc.n}", color = LogoBlueLight, fontWeight = FontWeight.Bold)
-            }
-        }
-
-        item { H2("Browse by year") }
+        // ---- Browse by year ----
+        item { H1("Browse by year") }
         items(yearCounts.sortedByDescending { it.year }.chunked(2)) { pair ->
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 pair.forEach { yc ->
@@ -139,6 +129,23 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
                     }
                 }
                 if (pair.size == 1) Spacer(Modifier.weight(1f))
+            }
+        }
+
+        // ---- Stats ----
+        item { H1("Stats") }
+        item { H2("Most beaten platforms") }
+        items(platformCounts.take(5)) { pc ->
+            Row(
+                Modifier.fillMaxWidth().gradientCard()
+                    .clickable { openGames(platform = pc.platform) }
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                PlatformIcon(pc.platform, 28)
+                Spacer(Modifier.width(10.dp))
+                Text(pc.platform, color = Cream, modifier = Modifier.weight(1f), fontSize = 14.sp)
+                Text("${pc.n}", color = LogoBlueLight, fontWeight = FontWeight.Bold)
             }
         }
 
@@ -231,15 +238,18 @@ fun MiniPlayingCard(modifier: Modifier, p: Playing, vm: AppViewModel, nav: NavHo
 
 @Composable
 fun StatCard(modifier: Modifier, big: String, small: String,
-             sub: Pair<String, Boolean>? = null, onClick: () -> Unit = {}) {
-    Column(
-        modifier.gradientCard().clickable(onClick = onClick).padding(14.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+             sub: Pair<String, Boolean>? = null, emoji: String? = null, onClick: () -> Unit = {}) {
+    Row(
+        modifier.gradientCard().clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(big, color = LogoBlueLight, fontSize = 26.sp, fontWeight = FontWeight.Black)
-        Text(small, color = Muted, fontSize = 12.sp)
-        sub?.let { (line, behind) ->
-            Text(line, color = if (behind) Warn else Good, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+        emoji?.let { Text(it, fontSize = 24.sp, modifier = Modifier.padding(end = 8.dp)) }
+        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(big, color = LogoBlueLight, fontSize = 24.sp, fontWeight = FontWeight.Black)
+            Text(small, color = Muted, fontSize = 12.sp)
+            sub?.let { (line, behind) ->
+                Text(line, color = if (behind) Warn else Good, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+            }
         }
     }
 }
