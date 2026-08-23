@@ -116,6 +116,81 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     suspend fun game(id: Long): Game? = dao.byId(id)
 
+    // ---- now playing ----
+    val playing = dao.playing().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    fun addPlaying(name: String, platform: String, notes: String?) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.insertPlaying(Playing(name = name.trim(), platform = platform.trim(),
+                started = java.time.LocalDate.now().toString(), notes = notes?.ifBlank { null }))
+        }
+    }
+    fun removePlaying(p: Playing) { viewModelScope.launch(Dispatchers.IO) { dao.deletePlaying(p) } }
+    suspend fun playingItem(id: Long): Playing? = dao.playingById(id)
+    fun consumePlaying(id: Long) { viewModelScope.launch(Dispatchers.IO) { dao.deletePlayingById(id) } }
+
+    // ---- series (stored in prefs) ----
+    private val prefs = app.getSharedPreferences("gc52", 0)
+    val series = MutableStateFlow(loadSeries())
+    private fun loadSeries(): List<String> =
+        prefs.getStringSet("series", setOf("Sonic", "Mario", "Zelda", "Final Fantasy", "Castlevania",
+            "Mega Man", "Metroid", "Kirby", "Pokemon", "StarFox"))!!.sorted()
+    fun addSeries(name: String) {
+        val set = loadSeries().toMutableSet(); set.add(name.trim())
+        prefs.edit().putStringSet("series", set).apply(); series.value = set.sorted()
+    }
+    fun removeSeries(name: String) {
+        val set = loadSeries().toMutableSet(); set.remove(name)
+        prefs.edit().putStringSet("series", set).apply(); series.value = set.sorted()
+    }
+    suspend fun seriesCounts(): List<Pair<String, Int>> {
+        val all = dao.allOnce()
+        return series.value.map { s ->
+            val n = normalizeTitle(s)
+            s to all.count { it.normName.contains(n) }
+        }.sortedByDescending { it.second }
+    }
+    suspend fun allGamesOnce(): List<Game> = dao.allOnce()
+
+    // ---- collage save ----
+    fun saveCollage(g: Game, bmp: android.graphics.Bitmap, onDone: (Game?) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            g.imageFile?.let { Storage.archiveImage(getApplication(), g.year, it) }
+            val fn = Storage.collageFileName(g.year, g.seq, g.name, g.platform, "jpg")
+            if (Storage.saveBitmapIntoYear(getApplication(), bmp, g.year, fn)) {
+                val updated = g.copy(imageFile = fn)
+                dao.update(updated); onDone(updated)
+            } else onDone(null)
+        }
+    }
+
+    // ---- export ----
+    val exportStatus = MutableStateFlow<String?>(null)
+    fun runExport() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val stamp = java.time.LocalDateTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd-HHmm"))
+                val all = dao.allOnce().sortedWith(compareBy({ it.year }, { it.seq }))
+                fun q(v: String?): String {
+                    val t = v ?: ""
+                    return if (t.contains(',') || t.contains('"'))
+                        "\"" + t.replace("\"", "\"\"") + "\"" else t
+                }
+                val csv = buildString {
+                    append("Year,Number,Name,Console,Date,ImageFile,Notes,Replay\n")
+                    all.forEach { g ->
+                        append("${g.year},${g.seq}/52,${q(g.name)},${q(g.platform)},${q(g.date)},${q(g.imageFile)},${q(g.notes)},${if (g.replay) "yes" else ""}\n")
+                    }
+                }
+                val okCsv = Storage.writeExport(getApplication(), "52gc-export-$stamp.csv", "text/csv", csv)
+                exportStatus.value = if (okCsv)
+                    "Exported ${all.size} games to exports/52gc-export-$stamp.csv"
+                else "Export failed — check the data folder in Settings"
+            } catch (e: Exception) { exportStatus.value = "Export failed: ${e.message}" }
+        }
+    }
+
     // ---- import ----
     val importStatus = MutableStateFlow<String?>(null)
     fun runImport(csvUri: Uri?) {

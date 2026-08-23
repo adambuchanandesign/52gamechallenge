@@ -25,6 +25,15 @@ data class Idea(
     val done: Boolean = false
 )
 
+@Entity(tableName = "playing")
+data class Playing(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val platform: String,
+    val started: String?,
+    val notes: String?
+)
+
 data class PlatformCount(val platform: String, val n: Int)
 data class YearCount(val year: Int, val n: Int)
 
@@ -79,9 +88,17 @@ interface GameDao {
     @Update suspend fun updateIdea(i: Idea)
     @Delete suspend fun deleteIdea(i: Idea)
     @Query("DELETE FROM ideas") suspend fun clearIdeas()
+
+    @Query("SELECT * FROM playing ORDER BY id DESC")
+    fun playing(): Flow<List<Playing>>
+    @Query("SELECT * FROM playing WHERE id = :id")
+    suspend fun playingById(id: Long): Playing?
+    @Insert suspend fun insertPlaying(p: Playing): Long
+    @Delete suspend fun deletePlaying(p: Playing)
+    @Query("DELETE FROM playing WHERE id = :id") suspend fun deletePlayingById(id: Long)
 }
 
-@Database(entities = [Game::class, Idea::class], version = 1, exportSchema = false)
+@Database(entities = [Game::class, Idea::class, Playing::class], version = 2, exportSchema = false)
 abstract class AppDb : RoomDatabase() {
     abstract fun dao(): GameDao
 
@@ -89,8 +106,15 @@ abstract class AppDb : RoomDatabase() {
         @Volatile private var inst: AppDb? = null
         fun get(ctx: Context): AppDb = inst ?: synchronized(this) {
             inst ?: Room.databaseBuilder(ctx.applicationContext, AppDb::class.java, "gc52.db")
+                .addMigrations(MIGRATION_1_2)
                 .build().also { inst = it }
         }
+    }
+}
+
+val MIGRATION_1_2 = object : androidx.room.migration.Migration(1, 2) {
+    override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS `playing` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `platform` TEXT NOT NULL, `started` TEXT, `notes` TEXT)")
     }
 }
 

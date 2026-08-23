@@ -83,6 +83,32 @@ object Storage {
         } catch (e: Exception) { false }
     }
 
+    /** Writes a rendered bitmap as JPEG into <folder>/<year>/<fileName>. */
+    fun saveBitmapIntoYear(ctx: Context, bmp: android.graphics.Bitmap, year: Int, fileName: String): Boolean {
+        return try {
+            val yearDir = dir(ctx, year.toString()) ?: return false
+            yearDir.findFile(fileName)?.delete()
+            val dest = yearDir.createFile("image/jpeg", fileName) ?: return false
+            ctx.contentResolver.openOutputStream(dest.uri)?.use { out ->
+                bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 92, out)
+            } ?: return false
+            true
+        } catch (e: Exception) { false }
+    }
+
+    /** Writes a text file into <folder>/exports/. Returns the file name on success. */
+    fun writeExport(ctx: Context, fileName: String, mime: String, content: String): Boolean {
+        return try {
+            val exp = dir(ctx, "exports") ?: return false
+            exp.findFile(fileName)?.delete()
+            val dest = exp.createFile(mime, fileName) ?: return false
+            ctx.contentResolver.openOutputStream(dest.uri)?.use { out ->
+                out.write(content.toByteArray(Charsets.UTF_8))
+            } ?: return false
+            true
+        } catch (e: Exception) { false }
+    }
+
     /** Moves <folder>/<year>/<fileName> into <folder>/archive/ (copy + delete). */
     fun archiveImage(ctx: Context, year: Int, fileName: String): Boolean {
         return try {

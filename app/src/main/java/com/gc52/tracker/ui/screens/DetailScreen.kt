@@ -84,14 +84,27 @@ fun DetailScreen(vm: AppViewModel, nav: NavHostController, id: Long) {
         Column(Modifier.fillMaxWidth().gradientCard().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             InfoLine("Challenge", "${g.seq}/52 of ${g.year}" + if (g.replay) "  ·  replay" else "")
             InfoLine("Beaten", g.date ?: "date unknown")
-            g.notes?.let { InfoLine("Notes", it) }
             g.imageFile?.let { InfoLine("Image", it) }
         }
 
         Spacer(Modifier.height(10.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.fillMaxWidth().gradientCard().padding(14.dp)) {
+            Text("Notes", color = LogoBlueLight, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(
+                g.notes ?: "No notes yet — tap the pencil to add some.",
+                color = if (g.notes == null) Muted else Cream, fontSize = 13.sp,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+        }
+
+        Spacer(Modifier.height(10.dp))
+        Row(verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = { nav.navigate("collage/" + g.id) }) {
+                Text(if (g.imageFile == null) "Build collage" else "Rebuild collage")
+            }
             OutlinedButton(onClick = { pickReplacement.launch("image/*") }) {
-                Text(if (g.imageFile == null) "Add collage from gallery" else "Replace collage from gallery")
+                Text("From gallery")
             }
         }
         replaceMsg?.let {

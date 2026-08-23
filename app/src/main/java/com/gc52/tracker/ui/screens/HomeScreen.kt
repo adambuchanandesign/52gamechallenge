@@ -8,6 +8,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -30,6 +32,8 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
     val platformCounts by vm.platformCounts.collectAsState()
     val query by vm.query.collectAsState()
     val results by vm.searchResults.collectAsState()
+    val playing by vm.playing.collectAsState()
+    var showAddPlaying by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -108,6 +112,39 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
             }
         }
 
+        // Now playing
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Now playing", color = Cream, fontWeight = FontWeight.Bold, fontSize = 16.sp,
+                    modifier = Modifier.weight(1f))
+                TextButton(onClick = { showAddPlaying = true }) { Text("+ Add", color = LogoBlueLight) }
+            }
+        }
+        if (playing.isEmpty()) {
+            item { Text("Nothing on the go — add what you're partway through so you don't forget.",
+                color = Muted, fontSize = 12.sp) }
+        }
+        items(playing, key = { "p" + it.id }) { p ->
+            Row(
+                Modifier.fillMaxWidth().gradientCard().padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                com.gc52.tracker.PlatformIcon(p.platform, 30)
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(p.name, color = Cream, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1)
+                    Text(p.platform + (p.started?.let { " · since $it" } ?: ""), color = Muted, fontSize = 11.sp)
+                    p.notes?.let { Text(it, color = Muted, fontSize = 11.sp, maxLines = 1) }
+                }
+                TextButton(onClick = { nav.navigate("add?playing=" + p.id) }) {
+                    Text("Beaten!", color = Good, fontWeight = FontWeight.Bold)
+                }
+                IconButton(onClick = { vm.removePlaying(p) }, modifier = Modifier.size(30.dp)) {
+                    Icon(Icons.Filled.Close, "remove", tint = Muted, modifier = Modifier.size(15.dp))
+                }
+            }
+        }
+
         // Top platforms
         item { Text("Most beaten platforms", color = Cream, fontWeight = FontWeight.Bold, fontSize = 16.sp) }
         items(platformCounts.take(5)) { pc ->
@@ -122,8 +159,43 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
             }
         }
 
+        item {
+            NavButton(Modifier.fillMaxWidth(), "Full stats", Icons.Filled.BarChart) { nav.navigate("stats") }
+        }
         item { Spacer(Modifier.height(20.dp)) }
     }
+
+    if (showAddPlaying) {
+        AddPlayingDialog(
+            platforms = platformCounts.map { it.platform },
+            onAdd = { n, pf, no -> vm.addPlaying(n, pf, no); showAddPlaying = false },
+            onDismiss = { showAddPlaying = false }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddPlayingDialog(platforms: List<String>, onAdd: (String, String, String?) -> Unit, onDismiss: () -> Unit) {
+    var n by remember { mutableStateOf("") }
+    var pf by remember { mutableStateOf("") }
+    var no by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Now playing") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(value = n, onValueChange = { n = it }, label = { Text("Game") }, singleLine = true)
+                OutlinedTextField(value = pf, onValueChange = { pf = it }, label = { Text("Platform") }, singleLine = true)
+                OutlinedTextField(value = no, onValueChange = { no = it }, label = { Text("Notes (where you're up to)") })
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = n.isNotBlank() && pf.isNotBlank(),
+                onClick = { onAdd(n, pf, no.ifBlank { null }) }) { Text("Add") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
 }
 
 @Composable

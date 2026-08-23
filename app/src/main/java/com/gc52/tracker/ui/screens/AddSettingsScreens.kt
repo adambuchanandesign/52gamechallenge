@@ -29,7 +29,7 @@ import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddScreen(vm: AppViewModel, nav: NavHostController) {
+fun AddScreen(vm: AppViewModel, nav: NavHostController, playingId: Long = -1L) {
     var name by remember { mutableStateOf("") }
     var platform by remember { mutableStateOf("") }
     var year by remember { mutableStateOf(LocalDate.now().year.toString()) }
@@ -44,6 +44,11 @@ fun AddScreen(vm: AppViewModel, nav: NavHostController) {
         if (uri != null) picked = uri
     }
 
+    LaunchedEffect(playingId) {
+        if (playingId > 0) vm.playingItem(playingId)?.let { p ->
+            name = p.name; platform = p.platform; if (!p.notes.isNullOrBlank()) notes = p.notes!!
+        }
+    }
     LaunchedEffect(name) { dups = if (name.trim().length >= 3) vm.duplicatesOf(name) else emptyList() }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
@@ -109,6 +114,7 @@ fun AddScreen(vm: AppViewModel, nav: NavHostController) {
             onClick = {
                 vm.addGame(name, platform, year.toInt(), date.trim().ifBlank { null }, notes, replay, picked) { id ->
                 }
+                if (playingId > 0) vm.consumePlaying(playingId)
                 nav.popBackStack()
             },
             colors = ButtonDefaults.buttonColors(containerColor = LogoBlue),
@@ -163,9 +169,19 @@ fun SettingsScreen(vm: AppViewModel, nav: NavHostController) {
             status?.let { Text(it, color = if (it.startsWith("Imported")) Good else Warn, fontSize = 13.sp) }
         }
 
+        Column(Modifier.fillMaxWidth().gradientCard().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Export", color = LogoBlueLight, fontWeight = FontWeight.Bold)
+            Text("Writes a timestamped CSV of everything (opens in Excel, and re-imports here) into exports/ in the data folder.",
+                color = Muted, fontSize = 12.sp)
+            val exportStatus by vm.exportStatus.collectAsState()
+            Button(onClick = { vm.runExport() },
+                colors = ButtonDefaults.buttonColors(containerColor = LogoBlue)) { Text("Export now") }
+            exportStatus?.let { Text(it, color = if (it.startsWith("Exported")) Good else Warn, fontSize = 13.sp) }
+        }
+
         Column(Modifier.fillMaxWidth().gradientCard().padding(14.dp)) {
             Text("Roadmap", color = LogoBlueLight, fontWeight = FontWeight.Bold)
-            Text("Coming next: collage builder, stats page, export, box art, platform icon manager, ideas backlog.",
+            Text("Coming next: box art, platform icon manager, ideas backlog.",
                 color = Muted, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
         }
     }

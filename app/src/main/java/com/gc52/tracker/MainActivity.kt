@@ -54,7 +54,17 @@ fun AppNav(nav: NavHostController) {
             val id = back.arguments?.getString("id")?.toLongOrNull() ?: return@composable
             DetailScreen(vm, nav, id)
         }
-        composable("add") { AddScreen(vm, nav) }
+        composable("add?playing={pid}",
+            arguments = listOf(androidx.navigation.navArgument("pid") { defaultValue = "-1" })
+        ) { back ->
+            val pid = back.arguments?.getString("pid")?.toLongOrNull() ?: -1L
+            AddScreen(vm, nav, pid)
+        }
+        composable("stats") { StatsScreen(vm, nav) }
+        composable("collage/{id}") { back ->
+            val id = back.arguments?.getString("id")?.toLongOrNull() ?: return@composable
+            CollageScreen(vm, nav, id)
+        }
         composable("settings") { SettingsScreen(vm, nav) }
     }
 }
