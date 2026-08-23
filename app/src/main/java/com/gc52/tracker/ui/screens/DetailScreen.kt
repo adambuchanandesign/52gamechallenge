@@ -31,10 +31,23 @@ fun DetailScreen(vm: AppViewModel, nav: NavHostController, id: Long) {
     var game by remember { mutableStateOf<Game?>(null) }
     var editing by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var replaceMsg by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(id) { game = vm.game(id) }
     val g = game ?: return
     val ctx = LocalContext.current
     val img = remember(g.id, g.imageFile) { Storage.imageUri(ctx, g.year, g.imageFile) }
+
+    val pickReplacement = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            replaceMsg = "Replacing…"
+            vm.replaceImage(g, uri) { updated ->
+                if (updated != null) { game = updated; replaceMsg = "Image replaced (old one moved to archive/)" }
+                else replaceMsg = "Replace failed — check the data folder in Settings"
+            }
+        }
+    }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -73,6 +86,17 @@ fun DetailScreen(vm: AppViewModel, nav: NavHostController, id: Long) {
             InfoLine("Beaten", g.date ?: "date unknown")
             g.notes?.let { InfoLine("Notes", it) }
             g.imageFile?.let { InfoLine("Image", it) }
+        }
+
+        Spacer(Modifier.height(10.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedButton(onClick = { pickReplacement.launch("image/*") }) {
+                Text(if (g.imageFile == null) "Add collage from gallery" else "Replace collage from gallery")
+            }
+        }
+        replaceMsg?.let {
+            Text(it, color = if (it.startsWith("Image replaced")) Good else Muted,
+                fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
         }
 
         if (editing) {

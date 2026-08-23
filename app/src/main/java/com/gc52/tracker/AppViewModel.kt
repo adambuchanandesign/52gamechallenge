@@ -71,15 +71,35 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun addGame(name: String, platform: String, year: Int, date: String?, notes: String?,
-                replay: Boolean, onDone: (Long) -> Unit) {
+                replay: Boolean, pickedImage: Uri?, onDone: (Long) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             val seq = dao.maxSeq(year) + 1
+            var imageFile: String? = null
+            if (pickedImage != null) {
+                val ext = Storage.extFor(getApplication(), pickedImage)
+                val fn = Storage.collageFileName(year, seq, name.trim(), platform.trim(), ext)
+                if (Storage.copyIntoYear(getApplication(), pickedImage, year, fn)) imageFile = fn
+            }
             val id = dao.insert(
                 Game(year = year, seq = seq, name = name.trim(), platform = platform.trim(),
-                    date = date, imageFile = null, notes = notes?.ifBlank { null },
+                    date = date, imageFile = imageFile, notes = notes?.ifBlank { null },
                     replay = replay, normName = normalizeTitle(name))
             )
             onDone(id)
+        }
+    }
+
+    /** Archives the current image (if any) and installs the picked one with the proper name. */
+    fun replaceImage(g: Game, picked: Uri, onDone: (Game?) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            g.imageFile?.let { Storage.archiveImage(getApplication(), g.year, it) }
+            val ext = Storage.extFor(getApplication(), picked)
+            val fn = Storage.collageFileName(g.year, g.seq, g.name, g.platform, ext)
+            if (Storage.copyIntoYear(getApplication(), picked, g.year, fn)) {
+                val updated = g.copy(imageFile = fn)
+                dao.update(updated)
+                onDone(updated)
+            } else onDone(null)
         }
     }
 

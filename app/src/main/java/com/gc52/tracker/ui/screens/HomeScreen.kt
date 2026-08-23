@@ -37,10 +37,13 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
     ) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("#52", color = LogoBlueLight, fontSize = 30.sp, fontWeight = FontWeight.Black)
-                    Text("GAME CHALLENGE", color = Cream, fontSize = 18.sp, fontWeight = FontWeight.Black)
-                }
+                androidx.compose.foundation.Image(
+                    painter = androidx.compose.ui.res.painterResource(com.gc52.tracker.R.drawable.logo_52gc),
+                    contentDescription = "#52GameChallenge",
+                    modifier = Modifier.weight(1f).height(96.dp),
+                    alignment = Alignment.CenterStart,
+                    contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                )
                 IconButton(onClick = { nav.navigate("settings") }) {
                     Icon(Icons.Filled.Settings, "Settings", tint = Muted)
                 }
@@ -97,6 +100,14 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
             }
         }
 
+        // Nav buttons
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                NavButton(Modifier.weight(1f), "Add beaten", Icons.Filled.Add) { nav.navigate("add") }
+                NavButton(Modifier.weight(1f), "Browse games", Icons.AutoMirrored.Filled.List) { nav.navigate("games") }
+            }
+        }
+
         // Top platforms
         item { Text("Most beaten platforms", color = Cream, fontWeight = FontWeight.Bold, fontSize = 16.sp) }
         items(platformCounts.take(5)) { pc ->
@@ -111,14 +122,7 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
             }
         }
 
-        // Nav buttons
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                NavButton(Modifier.weight(1f), "Browse games", Icons.AutoMirrored.Filled.List) { nav.navigate("games") }
-                NavButton(Modifier.weight(1f), "Add beaten", Icons.Filled.Add) { nav.navigate("add") }
-            }
-            Spacer(Modifier.height(20.dp))
-        }
+        item { Spacer(Modifier.height(20.dp)) }
     }
 }
 

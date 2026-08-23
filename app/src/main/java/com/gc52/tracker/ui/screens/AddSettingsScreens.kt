@@ -36,8 +36,13 @@ fun AddScreen(vm: AppViewModel, nav: NavHostController) {
     var date by remember { mutableStateOf(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))) }
     var notes by remember { mutableStateOf("") }
     var replay by remember { mutableStateOf(false) }
+    var picked by remember { mutableStateOf<Uri?>(null) }
     var dups by remember { mutableStateOf<List<Game>>(emptyList()) }
     val platforms by vm.platforms.collectAsState()
+
+    val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        if (uri != null) picked = uri
+    }
 
     LaunchedEffect(name) { dups = if (name.trim().length >= 3) vm.duplicatesOf(name) else emptyList() }
 
@@ -84,17 +89,32 @@ fun AddScreen(vm: AppViewModel, nav: NavHostController) {
             Text("Replay (beaten before)", color = Cream)
         }
 
+        Column(Modifier.fillMaxWidth().gradientCard().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Collage", color = LogoBlueLight, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(
+                if (picked == null) "Made one outside the app? Pick it and it'll be copied into the year folder and renamed to match the collection."
+                else "✓ Image selected — will be saved as ${year}-XXX - ${name.ifBlank { "…" }} (${platform.ifBlank { "…" }})",
+                color = if (picked == null) Muted else Good, fontSize = 12.sp
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { pickImage.launch("image/*") }) {
+                    Text(if (picked == null) "Pick from gallery" else "Pick a different one")
+                }
+                if (picked != null) TextButton(onClick = { picked = null }) { Text("Remove", color = Warn) }
+            }
+        }
+
         Button(
             enabled = name.isNotBlank() && platform.isNotBlank() && year.length == 4,
             onClick = {
-                vm.addGame(name, platform, year.toInt(), date.trim().ifBlank { null }, notes, replay) { id ->
+                vm.addGame(name, platform, year.toInt(), date.trim().ifBlank { null }, notes, replay, picked) { id ->
                 }
                 nav.popBackStack()
             },
             colors = ButtonDefaults.buttonColors(containerColor = LogoBlue),
             modifier = Modifier.fillMaxWidth()
         ) { Text("Save", fontWeight = FontWeight.Bold) }
-        Text("Collage builder + box art arrive in the next phase — the image can be attached from the game's page.",
+        Text("The in-app collage builder arrives in the next phase.",
             color = Muted, fontSize = 12.sp)
         Spacer(Modifier.height(20.dp))
     }

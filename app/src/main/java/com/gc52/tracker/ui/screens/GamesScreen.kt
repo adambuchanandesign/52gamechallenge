@@ -52,6 +52,14 @@ fun GamesScreen(vm: AppViewModel, nav: NavHostController) {
             Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            val anyFilter = filters.year != null || filters.platform != null || filters.sort != SortMode.NEWEST
+            if (anyFilter) {
+                AssistChip(
+                    onClick = { vm.filters.value = filters.copy(sort = SortMode.NEWEST, year = null, platform = null) },
+                    label = { Text("✕ Clear") },
+                    colors = AssistChipDefaults.assistChipColors(containerColor = Warn.copy(alpha = 0.18f), labelColor = Warn)
+                )
+            }
             SortChip("Newest", filters.sort == SortMode.NEWEST) { vm.filters.value = filters.copy(sort = SortMode.NEWEST) }
             SortChip("Oldest", filters.sort == SortMode.OLDEST) { vm.filters.value = filters.copy(sort = SortMode.OLDEST) }
             SortChip("A–Z", filters.sort == SortMode.AZ) { vm.filters.value = filters.copy(sort = SortMode.AZ) }

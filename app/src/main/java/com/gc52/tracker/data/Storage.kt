@@ -41,6 +41,68 @@ object Storage {
         val root = DocumentFile.fromTreeUri(ctx, tree) ?: return null
         return root.findFile(name)?.uri
     }
+
+    fun sanitizeFileName(s: String): String =
+        s.replace(Regex("[\\\\/:*?\"<>|]"), "").replace(Regex("\\s+"), " ").trim().trimEnd('.')
+
+    fun collageFileName(year: Int, seq: Int, name: String, platform: String, ext: String): String =
+        "%d-%03d - %s (%s).%s".format(year, seq, sanitizeFileName(name), sanitizeFileName(platform), ext)
+
+    fun extFor(ctx: Context, uri: Uri): String {
+        val mime = ctx.contentResolver.getType(uri) ?: ""
+        return when {
+            mime.contains("png") -> "png"
+            mime.contains("webp") -> "webp"
+            else -> "jpg"
+        }
+    }
+
+    private fun mimeFor(ext: String) = when (ext) {
+        "png" -> "image/png"
+        "webp" -> "image/webp"
+        else -> "image/jpeg"
+    }
+
+    private fun dir(ctx: Context, name: String): DocumentFile? {
+        val tree = Prefs.treeUri(ctx) ?: return null
+        val root = DocumentFile.fromTreeUri(ctx, tree) ?: return null
+        return root.findFile(name)?.takeIf { it.isDirectory } ?: root.createDirectory(name)
+    }
+
+    /** Copies a picked gallery image into <folder>/<year>/<fileName>. Returns true on success. */
+    fun copyIntoYear(ctx: Context, src: Uri, year: Int, fileName: String): Boolean {
+        return try {
+            val yearDir = dir(ctx, year.toString()) ?: return false
+            yearDir.findFile(fileName)?.delete()
+            val ext = fileName.substringAfterLast('.', "jpg")
+            val dest = yearDir.createFile(mimeFor(ext), fileName) ?: return false
+            ctx.contentResolver.openInputStream(src)?.use { inp ->
+                ctx.contentResolver.openOutputStream(dest.uri)?.use { out -> inp.copyTo(out) }
+            } ?: return false
+            true
+        } catch (e: Exception) { false }
+    }
+
+    /** Moves <folder>/<year>/<fileName> into <folder>/archive/ (copy + delete). */
+    fun archiveImage(ctx: Context, year: Int, fileName: String): Boolean {
+        return try {
+            val tree = Prefs.treeUri(ctx) ?: return false
+            val root = DocumentFile.fromTreeUri(ctx, tree) ?: return false
+            val src = root.findFile(year.toString())?.findFile(fileName) ?: return true // nothing to archive
+            val archive = dir(ctx, "archive") ?: return false
+            var destName = fileName
+            if (archive.findFile(destName) != null)
+                destName = fileName.substringBeforeLast('.') + "-" + System.currentTimeMillis() +
+                        "." + fileName.substringAfterLast('.', "jpg")
+            val ext = destName.substringAfterLast('.', "jpg")
+            val dest = archive.createFile(mimeFor(ext), destName) ?: return false
+            ctx.contentResolver.openInputStream(src.uri)?.use { inp ->
+                ctx.contentResolver.openOutputStream(dest.uri)?.use { out -> inp.copyTo(out) }
+            } ?: return false
+            src.delete()
+            true
+        } catch (e: Exception) { false }
+    }
 }
 
 /** Minimal RFC-4180-ish CSV reader (handles quoted fields with commas). */
