@@ -31,9 +31,11 @@ fun DisambigScreen(vm: AppViewModel, nav: NavHostController) {
     val igdb by vm.igdbUi.collectAsState()
     val hits = (igdb as? AppViewModel.IgdbUi.Loaded)?.hits ?: emptyList()
     var similar by remember { mutableStateOf<List<Game>>(emptyList()) }
-    // (name, suggested platforms) for the prefilled Now Playing dialog
-    var picking by remember { mutableStateOf<Pair<String, List<String>>?>(null) }
     LaunchedEffect(query) { similar = if (query.length >= 2) vm.duplicatesOf(query) else emptyList() }
+    fun pick(name: String, platforms: List<String>, cover: String?) {
+        vm.pendingNp = AppViewModel.PendingNp(name, platforms, cover)
+        nav.navigate("npadd")
+    }
 
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
@@ -60,7 +62,7 @@ fun DisambigScreen(vm: AppViewModel, nav: NavHostController) {
         if (query.isNotEmpty()) item {
             Row(
                 Modifier.fillMaxWidth().gradientCard()
-                    .clickable { picking = query to emptyList() }
+                    .clickable { pick(query, emptyList(), null) }
                     .padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -78,7 +80,7 @@ fun DisambigScreen(vm: AppViewModel, nav: NavHostController) {
         items(hits, key = { it.id }) { h ->
             Row(
                 Modifier.fillMaxWidth().gradientCard()
-                    .clickable { picking = h.name to h.platforms.map { Igdb.mapPlatform(it) }.distinct() }
+                    .clickable { pick(h.name, h.platforms.map { Igdb.mapPlatform(it) }.distinct(), h.coverUrl) }
                     .padding(10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -113,17 +115,4 @@ fun DisambigScreen(vm: AppViewModel, nav: NavHostController) {
         item { Spacer(Modifier.height(16.dp)) }
     }
 
-    picking?.let { (name, plats) ->
-        AddPlayingDialog(
-            initialName = name,
-            platformSuggestions = plats,
-            onAdd = { n, pf, no ->
-                vm.addPlaying(n, pf, no)
-                picking = null
-                vm.query.value = ""
-                nav.popBackStack()
-            },
-            onDismiss = { picking = null }
-        )
-    }
 }

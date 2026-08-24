@@ -21,7 +21,7 @@ data class Filters(
     val sort: SortMode = SortMode.NEWEST,
     val year: Int? = null,
     val platform: String? = null,
-    val view: ViewMode = ViewMode.LIST
+    val view: ViewMode = ViewMode.GRID
 )
 
 data class Pace(val count: Int, val week: Int, val diff: Int)  // diff = count - week
@@ -164,12 +164,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     // ---- now playing ----
     val playing = dao.playing().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    fun addPlaying(name: String, platform: String, notes: String?) {
+    data class PendingNp(val name: String, val platforms: List<String>, val coverUrl: String?)
+    var pendingNp: PendingNp? = null
+
+    fun addPlaying(name: String, platform: String, notes: String?, coverUrl: String? = null) {
         viewModelScope.launch(Dispatchers.IO) {
             dao.insertPlaying(Playing(name = name.trim(), platform = platform.trim(),
-                started = java.time.LocalDate.now().toString(), notes = notes?.ifBlank { null }))
+                started = java.time.LocalDate.now().toString(), notes = notes?.ifBlank { null },
+                coverUrl = coverUrl))
         }
     }
+    fun updatePlaying(p: Playing) { viewModelScope.launch(Dispatchers.IO) { dao.updatePlaying(p) } }
     fun removePlaying(p: Playing) { viewModelScope.launch(Dispatchers.IO) { dao.deletePlaying(p) } }
     suspend fun playingItem(id: Long): Playing? = dao.playingById(id)
     fun consumePlaying(id: Long) { viewModelScope.launch(Dispatchers.IO) { dao.deletePlayingById(id) } }

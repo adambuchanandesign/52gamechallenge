@@ -1,6 +1,8 @@
 package com.gc52.tracker.ui.screens
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -244,22 +246,30 @@ fun androidx.compose.foundation.lazy.LazyListScope.searchResults(vm: AppViewMode
 @Composable
 fun MiniPlayingCard(modifier: Modifier, p: Playing, vm: AppViewModel, nav: NavHostController) {
     Column(
-        modifier.gradientCard().padding(10.dp),
+        modifier.gradientCard()
+            .clickable { nav.navigate("playingdetail/" + p.id) }
+            .padding(10.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            PlatformIcon(p.platform, 24)
-            Spacer(Modifier.weight(1f))
-            IconButton(onClick = { vm.removePlaying(p) }, modifier = Modifier.size(24.dp)) {
-                Icon(Icons.Filled.Close, "remove", tint = Muted, modifier = Modifier.size(13.dp))
-            }
+        Box(
+            Modifier.fillMaxWidth().aspectRatio(0.75f)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
+                .background(Surface2),
+            contentAlignment = Alignment.Center
+        ) {
+            if (p.coverUrl != null) {
+                coil.compose.AsyncImage(
+                    model = p.coverUrl!!.replace("t_cover_small", "t_cover_big"),
+                    contentDescription = p.name,
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else PlatformIcon(p.platform, 48)
         }
+        Spacer(Modifier.height(6.dp))
         Text(p.name, color = Cream, fontWeight = FontWeight.SemiBold, fontSize = 15.sp,
             maxLines = 2, modifier = Modifier.fillMaxWidth())
         Text(p.platform, color = Muted, fontSize = 14.sp, maxLines = 1, modifier = Modifier.fillMaxWidth())
-        TextButton(onClick = { nav.navigate("add?playing=" + p.id) }) {
-            Text("Beaten!", color = Good, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-        }
     }
 }
 

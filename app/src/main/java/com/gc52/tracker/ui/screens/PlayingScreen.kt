@@ -39,24 +39,11 @@ fun PlayingScreen(vm: AppViewModel, nav: NavHostController) {
         if (playing.isEmpty()) {
             item { Text("Nothing on the go right now.", color = Muted, fontSize = 15.sp) }
         }
-        items(playing, key = { it.id }) { p ->
-            Row(
-                Modifier.fillMaxWidth().gradientCard().padding(horizontal = 12.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                PlatformIcon(p.platform, 30)
-                Spacer(Modifier.width(10.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(p.name, color = Cream, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, maxLines = 1)
-                    Text(p.platform + (p.started?.let { " · since $it" } ?: ""), color = Muted, fontSize = 14.sp)
-                    p.notes?.let { Text(it, color = Muted, fontSize = 14.sp, maxLines = 2) }
-                }
-                TextButton(onClick = { nav.navigate("add?playing=" + p.id) }) {
-                    Text("Beaten!", color = Good, fontWeight = FontWeight.Bold)
-                }
-                IconButton(onClick = { vm.removePlaying(p) }, modifier = Modifier.size(30.dp)) {
-                    Icon(Icons.Filled.Close, "remove", tint = Muted, modifier = Modifier.size(15.dp))
-                }
+        items(playing.chunked(2), key = { it.first().id }) { pair ->
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                MiniPlayingCard(Modifier.weight(1f), pair[0], vm, nav)
+                if (pair.size > 1) MiniPlayingCard(Modifier.weight(1f), pair[1], vm, nav)
+                else Spacer(Modifier.weight(1f))
             }
         }
         item { Spacer(Modifier.height(16.dp)) }

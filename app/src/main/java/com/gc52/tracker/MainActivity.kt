@@ -21,6 +21,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.asImageBitmap
@@ -75,13 +78,28 @@ fun AppNav(nav: NavHostController) {
         }
     }
     val density = androidx.compose.ui.platform.LocalDensity.current
-    val barHPx = with(density) { 66.dp.toPx() }
+    val barHPx = with(density) { 64.dp.toPx() }
+    val extraPx = with(density) { 64.dp.roundToPx() }
     val barOffset by androidx.compose.animation.core.animateFloatAsState(
         if (barVisible) 0f else -barHPx, label = "barOffset"
     )
 
-    Box(Modifier.fillMaxSize().nestedScroll(conn)) {
-        Box(Modifier.fillMaxSize().padding(top = 64.dp)) {
+    Box(Modifier.fillMaxSize().nestedScroll(conn).clipToBounds()) {
+        Box(
+            Modifier
+                .layout { measurable, constraints ->
+                    // Content is always viewport + bar height tall, so sliding it up
+                    // reveals more content instead of a gap. Placement only - never re-measures.
+                    val p = measurable.measure(
+                        constraints.copy(
+                            minHeight = constraints.maxHeight + extraPx,
+                            maxHeight = constraints.maxHeight + extraPx
+                        )
+                    )
+                    layout(p.width, constraints.maxHeight) { p.place(0, 0) }
+                }
+                .graphicsLayer { translationY = barHPx + barOffset }
+        ) {
             NavHost(navController = nav, startDestination = "home") {
                 composable("home") { HomeScreen(vm, nav) }
                 composable("games") { GamesScreen(vm, nav) }
@@ -98,6 +116,11 @@ fun AppNav(nav: NavHostController) {
                 composable("stats") { StatsScreen(vm, nav) }
                 composable("playing") { PlayingScreen(vm, nav) }
                 composable("disambig") { DisambigScreen(vm, nav) }
+                composable("npadd") { NpAddScreen(vm, nav) }
+                composable("playingdetail/{id}") { back ->
+                    val id = back.arguments?.getString("id")?.toLongOrNull() ?: return@composable
+                    PlayingDetailScreen(vm, nav, id)
+                }
                 composable("collage/{id}") { back ->
                     val id = back.arguments?.getString("id")?.toLongOrNull() ?: return@composable
                     CollageScreen(vm, nav, id)
