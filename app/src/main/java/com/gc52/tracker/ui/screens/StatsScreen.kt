@@ -82,14 +82,14 @@ fun StatsScreen(vm: AppViewModel, nav: NavHostController) {
                 ) {
                     yearCounts.forEach { yc ->
                         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("${yc.n}", color = Muted, fontSize = 11.sp)
+                            Text("${yc.n}", color = Muted, fontSize = 12.sp)
                             Box(
                                 Modifier.fillMaxWidth()
                                     .height((110 * yc.n / max).coerceAtLeast(4).dp)
                                     .clip(RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
                                     .background(AccentGradient)
                             )
-                            Text("'${yc.year % 100}", color = Muted, fontSize = 11.sp)
+                            Text("'${yc.year % 100}", color = Muted, fontSize = 12.sp)
                         }
                     }
                 }
@@ -106,7 +106,7 @@ fun StatsScreen(vm: AppViewModel, nav: NavHostController) {
                 val eraMax = (eras.maxOfOrNull { it.second } ?: 1).coerceAtLeast(1)
                 eras.forEach { (era, n) ->
                     Row(Modifier.padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(era, color = Cream, fontSize = 14.sp, modifier = Modifier.width(120.dp))
+                        Text(era, color = Cream, fontSize = 15.sp, modifier = Modifier.width(120.dp))
                         Box(
                             Modifier.weight(1f).height(10.dp).clip(RoundedCornerShape(5.dp)).background(Surface2)
                         ) {
@@ -115,7 +115,7 @@ fun StatsScreen(vm: AppViewModel, nav: NavHostController) {
                                     .clip(RoundedCornerShape(5.dp)).background(AccentGradient)
                             )
                         }
-                        Text(" $n", color = Muted, fontSize = 13.sp)
+                        Text(" $n", color = Muted, fontSize = 14.sp)
                     }
                 }
             }
@@ -128,7 +128,7 @@ fun StatsScreen(vm: AppViewModel, nav: NavHostController) {
                 Spacer(Modifier.height(6.dp))
                 seriesCounts.forEach { (name, n) ->
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
-                        Text(name, color = Cream, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                        Text(name, color = Cream, fontSize = 16.sp, modifier = Modifier.weight(1f))
                         Text("$n", color = LogoBlueLight, fontWeight = FontWeight.Bold)
                         IconButton(onClick = { vm.removeSeries(name) }, modifier = Modifier.size(28.dp)) {
                             Icon(Icons.Filled.Close, "remove", tint = Muted, modifier = Modifier.size(14.dp))
@@ -154,7 +154,7 @@ fun StatsScreen(vm: AppViewModel, nav: NavHostController) {
         }
 
         // Fun facts — its own section, one mini block per fact
-        item { Text("Fun facts", color = Cream, fontWeight = FontWeight.Bold, fontSize = 17.sp) }
+        item { Text("Fun facts", color = Cream, fontWeight = FontWeight.Bold, fontSize = 18.sp) }
         item {
             val facts = remember(all) { buildFacts(all, platformCounts.size) }
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -162,8 +162,8 @@ fun StatsScreen(vm: AppViewModel, nav: NavHostController) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         pair.forEach { (label, value) ->
                             Column(Modifier.weight(1f).gradientCard().padding(12.dp)) {
-                                Text(label, color = LogoBlueLight, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                Text(value, color = Cream, fontSize = 14.sp,
+                                Text(label, color = LogoBlueLight, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                Text(value, color = Cream, fontSize = 15.sp,
                                     modifier = Modifier.padding(top = 3.dp))
                             }
                         }
@@ -187,7 +187,7 @@ fun StatsScreen(vm: AppViewModel, nav: NavHostController) {
             ) {
                 com.gc52.tracker.PlatformIcon(pc.platform, 26)
                 Spacer(Modifier.width(10.dp))
-                Text(pc.platform, color = Cream, modifier = Modifier.weight(1f), fontSize = 14.sp)
+                Text(pc.platform, color = Cream, modifier = Modifier.weight(1f), fontSize = 15.sp)
                 Text("${pc.n}", color = LogoBlueLight, fontWeight = FontWeight.Bold)
             }
         }

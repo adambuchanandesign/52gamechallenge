@@ -71,12 +71,12 @@ fun CollageScreen(vm: AppViewModel, nav: NavHostController, gameId: Long) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Muted)
             }
             Column {
-                Text("Collage builder", color = Cream, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                Text("${g.name} (${g.platform})", color = Muted, fontSize = 13.sp, maxLines = 1)
+                Text("Collage builder", color = Cream, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                Text("${g.name} (${g.platform})", color = Muted, fontSize = 14.sp, maxLines = 1)
             }
         }
         Text("Tap a tile to select it, then pick its photo. Pinch to zoom, drag to pan, twist to rotate.",
-            color = Muted, fontSize = 13.sp, modifier = Modifier.padding(vertical = 6.dp))
+            color = Muted, fontSize = 14.sp, modifier = Modifier.padding(vertical = 6.dp))
 
         // 2x2 preview: tiles 0,1 / 2,logo — white gutters like the originals
         val gutter = 3.dp
@@ -119,7 +119,7 @@ fun CollageScreen(vm: AppViewModel, nav: NavHostController, gameId: Long) {
         }
         Text(
             "Order guide: 1 = title screen, 2 = final area, 3 = ending.",
-            color = Muted, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp)
+            color = Muted, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp)
         )
 
         Spacer(Modifier.height(12.dp))
@@ -140,7 +140,7 @@ fun CollageScreen(vm: AppViewModel, nav: NavHostController, gameId: Long) {
             colors = ButtonDefaults.buttonColors(containerColor = LogoBlue),
             modifier = Modifier.fillMaxWidth()
         ) { Text(if (saving) "Saving…" else "Save collage (2048×2048)", fontWeight = FontWeight.Bold) }
-        msg?.let { Text(it, color = Muted, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp)) }
+        msg?.let { Text(it, color = Muted, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp)) }
         Spacer(Modifier.height(24.dp))
     }
 }
@@ -180,7 +180,7 @@ fun TileBox(modifier: Modifier, t: TileState, selected: Boolean, onSelect: () ->
             )
         } else {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Tap, then\npick photo", color = Muted, fontSize = 13.sp)
+                Text("Tap, then\npick photo", color = Muted, fontSize = 14.sp)
             }
         }
         if (selected) {

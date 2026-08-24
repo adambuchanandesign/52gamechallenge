@@ -25,6 +25,12 @@ Built by GitHub Actions — no local Android tooling needed.
    `nintendo-switch.png`, `commodore-amiga.png`). 44 icons are bundled;
    everything else gets a generated initials tile.
 
+## Updating without uninstalling
+
+The repo contains `keystore/debug.keystore` and the build signs every APK
+with it, so updates install cleanly over the top. (The switch to this
+keystore itself requires ONE final uninstall/reinstall.)
+
 ## What's in Phase 1
 
 - Home: "Have I beaten this?" instant fuzzy search, totals, weekly pace

@@ -6,12 +6,6 @@ import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,12 +13,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -67,6 +63,7 @@ class MainActivity : ComponentActivity() {
 fun AppNav(nav: NavHostController) {
     val vm: AppViewModel = viewModel()
     var barVisible by remember { mutableStateOf(true) }
+    var menuOpen by remember { mutableStateOf(false) }
     val conn = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
@@ -76,10 +73,14 @@ fun AppNav(nav: NavHostController) {
             }
         }
     }
-    val topPad by animateDpAsState(if (barVisible) 64.dp else 0.dp, label = "topPad")
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val barHPx = with(density) { 66.dp.toPx() }
+    val barOffset by androidx.compose.animation.core.animateFloatAsState(
+        if (barVisible) 0f else -barHPx, label = "barOffset"
+    )
 
     Box(Modifier.fillMaxSize().nestedScroll(conn)) {
-        Box(Modifier.fillMaxSize().padding(top = topPad)) {
+        Box(Modifier.fillMaxSize().padding(top = 64.dp)) {
             NavHost(navController = nav, startDestination = "home") {
                 composable("home") { HomeScreen(vm, nav) }
                 composable("games") { GamesScreen(vm, nav) }
@@ -102,41 +103,57 @@ fun AppNav(nav: NavHostController) {
                 composable("settings") { SettingsScreen(vm, nav) }
             }
         }
-        AnimatedVisibility(
-            visible = barVisible,
-            enter = slideInVertically { -it } + fadeIn(),
-            exit = slideOutVertically { -it } + fadeOut(),
+        TopBar(
+            nav,
+            onMenu = { menuOpen = true },
             modifier = Modifier.align(Alignment.TopCenter)
-        ) { TopBar(nav) }
+                .offset { androidx.compose.ui.unit.IntOffset(0, barOffset.toInt()) }
+        )
+        if (menuOpen) FullScreenMenu(nav) { menuOpen = false }
     }
 }
 
 @Composable
-fun TopBar(nav: NavHostController) {
-    var menuOpen by remember { mutableStateOf(false) }
-    Column {
+fun FullScreenMenu(nav: NavHostController, onClose: () -> Unit) {
+    androidx.activity.compose.BackHandler(onBack = onClose)
+    Box(
+        Modifier.fillMaxSize()
+            .background(Bg.copy(alpha = 0.98f))
+            .clickable(onClick = onClose)
+    ) {
+        IconButton(onClick = onClose, modifier = Modifier.align(Alignment.TopEnd).padding(12.dp)) {
+            Icon(Icons.Filled.Close, "Close", tint = Cream)
+        }
+        Column(
+            Modifier.align(Alignment.Center),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(26.dp)
+        ) {
+            listOf(
+                "Homepage" to "home",
+                "Completed" to "games",
+                "Now Playing" to "playing",
+                "Stats" to "stats",
+                "Settings" to "settings"
+            ).forEach { (label, route) ->
+                Text(
+                    label, color = Cream, fontSize = 26.sp, fontWeight = FontWeight.Bold,
+                    modifier = Modifier.clickable {
+                        onClose()
+                        nav.navigate(route) { launchSingleTop = true }
+                    }.padding(horizontal = 24.dp, vertical = 4.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun TopBar(nav: NavHostController, onMenu: () -> Unit, modifier: Modifier = Modifier) {
+    Column(modifier) {
         Box(Modifier.fillMaxWidth().height(63.dp).background(Surface2)) {
-            Box(Modifier.align(Alignment.CenterStart)) {
-                IconButton(onClick = { menuOpen = true }) {
-                    Icon(Icons.Filled.Menu, "Menu", tint = Cream)
-                }
-                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                    listOf(
-                        "Homepage" to "home",
-                        "Completed" to "games",
-                        "Now Playing" to "playing",
-                        "Stats" to "stats",
-                        "Settings" to "settings"
-                    ).forEach { (label, route) ->
-                        DropdownMenuItem(
-                            text = { Text(label) },
-                            onClick = {
-                                menuOpen = false
-                                nav.navigate(route) { launchSingleTop = true }
-                            }
-                        )
-                    }
-                }
+            IconButton(onClick = onMenu, modifier = Modifier.align(Alignment.CenterStart)) {
+                Icon(Icons.Filled.Menu, "Menu", tint = Cream)
             }
             Image(
                 painter = painterResource(R.drawable.logo_52gc),
@@ -224,15 +241,15 @@ fun GameRow(g: Game, onClick: () -> Unit) {
         PlatformIcon(g.platform)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(g.name, color = Cream, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1)
+            Text(g.name, color = Cream, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, maxLines = 1)
             Text(
                 g.platform + if (g.replay) " · replay" else "",
-                color = Muted, fontSize = 13.sp, maxLines = 1
+                color = Muted, fontSize = 14.sp, maxLines = 1
             )
         }
         Column(horizontalAlignment = Alignment.End) {
-            Text("${g.seq}/52", color = Cream, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-            g.date?.let { Text(it.take(10), color = Muted, fontSize = 13.sp) }
+            Text("${g.seq}/52", color = Cream, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            g.date?.let { Text(it.take(10), color = Muted, fontSize = 14.sp) }
         }
     }
 }
@@ -244,7 +261,7 @@ fun YearDivider(year: Int) {
         modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)
     ) {
         HorizontalDivider(modifier = Modifier.weight(1f), color = Muted.copy(alpha = 0.25f))
-        Text("$year", color = Cream, fontWeight = FontWeight.Bold, fontSize = 18.sp,
+        Text("$year", color = Cream, fontWeight = FontWeight.Bold, fontSize = 19.sp,
             modifier = Modifier.padding(horizontal = 12.dp))
         HorizontalDivider(modifier = Modifier.weight(1f), color = Muted.copy(alpha = 0.25f))
     }
@@ -273,12 +290,12 @@ fun GameLargeCell(g: Game, onClick: () -> Unit) {
             PlatformIcon(g.platform, 28)
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
-                Text(g.name, color = Cream, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                Text(g.platform, color = Muted, fontSize = 13.sp, maxLines = 1)
+                Text(g.name, color = Cream, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                Text(g.platform, color = Muted, fontSize = 14.sp, maxLines = 1)
             }
             Column(horizontalAlignment = Alignment.End) {
-                Text("${g.seq}/52", color = Cream, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                g.date?.let { Text(it.take(10), color = Muted, fontSize = 13.sp) }
+                Text("${g.seq}/52", color = Cream, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                g.date?.let { Text(it.take(10), color = Muted, fontSize = 14.sp) }
             }
         }
     }
@@ -303,9 +320,9 @@ fun GameGridCell(g: Game, onClick: () -> Unit) {
             } else PlatformIcon(g.platform, 48)
         }
         Spacer(Modifier.height(6.dp))
-        Text(g.name, color = Cream, fontSize = 13.sp, maxLines = 1, fontWeight = FontWeight.Medium)
-        Text(g.platform, color = Muted, fontSize = 12.sp, maxLines = 1)
-        Text("${g.seq}/52", color = Cream, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-        g.date?.let { Text(it.take(10), color = Muted, fontSize = 11.sp) }
+        Text(g.name, color = Cream, fontSize = 14.sp, maxLines = 1, fontWeight = FontWeight.Medium)
+        Text(g.platform, color = Muted, fontSize = 13.sp, maxLines = 1)
+        Text("${g.seq}/52", color = Cream, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        g.date?.let { Text(it.take(10), color = Muted, fontSize = 12.sp) }
     }
 }

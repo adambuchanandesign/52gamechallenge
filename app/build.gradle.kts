@@ -11,8 +11,8 @@ android {
         applicationId = "com.gc52.tracker"
         minSdk = 26
         targetSdk = 34
-        versionCode = 6
-        versionName = "0.6"
+        versionCode = 7
+        versionName = "0.7"
     }
     signingConfigs {
         create("shared") {
@@ -24,7 +24,10 @@ android {
     }
     buildTypes {
         getByName("debug") { signingConfig = signingConfigs.getByName("shared") }
-        release { isMinifyEnabled = false }
+        release {
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("shared")
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

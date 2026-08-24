@@ -66,6 +66,9 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
             }
         }
 
+        item { Spacer(Modifier.height(6.dp)) }
+        item { SectionBreak() }
+
         // ---- Have I beaten this? ----
         item { H1("Have I beaten this?") }
         item { BeatenSearch(vm) }
@@ -82,7 +85,7 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
         if (playing.isEmpty()) {
             item {
                 Text("Nothing on the go — add what you're partway through so you don't forget.",
-                    color = Muted, fontSize = 13.sp)
+                    color = Muted, fontSize = 14.sp)
             }
         } else {
             item {
@@ -110,8 +113,8 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
                             .padding(vertical = 12.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("${yc.year}", color = Cream, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Text("${yc.n} games", color = Muted, fontSize = 13.sp)
+                        Text("${yc.year}", color = Cream, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                        Text("${yc.n} games", color = Muted, fontSize = 14.sp)
                     }
                 }
                 if (pair.size == 1) Spacer(Modifier.weight(1f))
@@ -131,7 +134,7 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
             ) {
                 PlatformIcon(pc.platform, 28)
                 Spacer(Modifier.width(10.dp))
-                Text(pc.platform, color = Cream, modifier = Modifier.weight(1f), fontSize = 15.sp)
+                Text(pc.platform, color = Cream, modifier = Modifier.weight(1f), fontSize = 16.sp)
                 Text("${pc.n}", color = LogoBlueLight, fontWeight = FontWeight.Bold)
             }
         }
@@ -161,11 +164,11 @@ fun SectionBreak() {
 
 @Composable
 fun H1(text: String, modifier: Modifier = Modifier) =
-    Text(text, color = Cream, fontWeight = FontWeight.Black, fontSize = 22.sp, modifier = modifier)
+    Text(text, color = Cream, fontWeight = FontWeight.Black, fontSize = 24.sp, modifier = modifier)
 
 @Composable
 fun H2(text: String, modifier: Modifier = Modifier) =
-    Text(text, color = Cream, fontWeight = FontWeight.Bold, fontSize = 17.sp, modifier = modifier)
+    Text(text, color = Cream, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = modifier)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -198,7 +201,7 @@ fun androidx.compose.foundation.lazy.LazyListScope.searchResults(vm: AppViewMode
                 }
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Beaten ${results.size}×:", color = Muted, fontSize = 14.sp)
+                    Text("Beaten ${results.size}×:", color = Muted, fontSize = 15.sp)
                     results.take(8).forEach { g ->
                         GameRow(g) { nav.navigate("detail/${g.id}") }
                     }
@@ -221,11 +224,11 @@ fun MiniPlayingCard(modifier: Modifier, p: Playing, vm: AppViewModel, nav: NavHo
                 Icon(Icons.Filled.Close, "remove", tint = Muted, modifier = Modifier.size(13.dp))
             }
         }
-        Text(p.name, color = Cream, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
+        Text(p.name, color = Cream, fontWeight = FontWeight.SemiBold, fontSize = 15.sp,
             maxLines = 2, modifier = Modifier.fillMaxWidth())
-        Text(p.platform, color = Muted, fontSize = 13.sp, maxLines = 1, modifier = Modifier.fillMaxWidth())
+        Text(p.platform, color = Muted, fontSize = 14.sp, maxLines = 1, modifier = Modifier.fillMaxWidth())
         TextButton(onClick = { nav.navigate("add?playing=" + p.id) }) {
-            Text("Beaten!", color = Good, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text("Beaten!", color = Good, fontWeight = FontWeight.Bold, fontSize = 15.sp)
         }
     }
 }
@@ -237,12 +240,12 @@ fun StatCard(modifier: Modifier, big: String, small: String,
         modifier.gradientCard().clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        emoji?.let { Text(it, fontSize = 24.sp, modifier = Modifier.padding(end = 8.dp)) }
+        emoji?.let { Text(it, fontSize = 26.sp, modifier = Modifier.padding(start = 8.dp, end = 10.dp)) }
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(big, color = Cream, fontSize = 30.sp, fontWeight = FontWeight.Black)
-            Text(small, color = Muted, fontSize = 13.sp)
+            Text(big, color = Cream, fontSize = 32.sp, fontWeight = FontWeight.Black)
+            Text(small, color = Muted, fontSize = 14.sp)
             sub?.let { (line, behind) ->
-                Text(line, color = if (behind) Warn else Good, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                Text(line, color = if (behind) Warn else Good, fontSize = 14.sp, fontWeight = FontWeight.Medium)
             }
         }
     }

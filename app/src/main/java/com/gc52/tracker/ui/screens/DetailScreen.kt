@@ -77,7 +77,7 @@ fun DetailScreen(vm: AppViewModel, nav: NavHostController, id: Long) {
             Spacer(Modifier.width(12.dp))
             Column {
                 Text(g.name, color = Cream, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                Text(g.platform, color = Muted, fontSize = 14.sp)
+                Text(g.platform, color = Muted, fontSize = 15.sp)
             }
         }
         Spacer(Modifier.height(10.dp))
@@ -89,10 +89,10 @@ fun DetailScreen(vm: AppViewModel, nav: NavHostController, id: Long) {
 
         Spacer(Modifier.height(10.dp))
         Column(Modifier.fillMaxWidth().gradientCard().padding(14.dp)) {
-            Text("Notes", color = LogoBlueLight, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            Text("Notes", color = LogoBlueLight, fontWeight = FontWeight.Bold, fontSize = 16.sp)
             Text(
                 g.notes ?: "No notes yet — tap the pencil to add some.",
-                color = if (g.notes == null) Muted else Cream, fontSize = 14.sp,
+                color = if (g.notes == null) Muted else Cream, fontSize = 15.sp,
                 modifier = Modifier.padding(top = 4.dp)
             )
         }
@@ -109,7 +109,7 @@ fun DetailScreen(vm: AppViewModel, nav: NavHostController, id: Long) {
         }
         replaceMsg?.let {
             Text(it, color = if (it.startsWith("Image replaced")) Good else Muted,
-                fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+                fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
         }
 
         if (editing) {
@@ -135,8 +135,8 @@ fun DetailScreen(vm: AppViewModel, nav: NavHostController, id: Long) {
 @Composable
 fun InfoLine(label: String, value: String) {
     Row {
-        Text(label, color = Muted, fontSize = 14.sp, modifier = Modifier.width(84.dp))
-        Text(value, color = Cream, fontSize = 14.sp)
+        Text(label, color = Muted, fontSize = 15.sp, modifier = Modifier.width(84.dp))
+        Text(value, color = Cream, fontSize = 15.sp)
     }
 }
 
@@ -159,7 +159,7 @@ fun EditForm(g: Game, onSave: (Game) -> Unit) {
         Field("Notes", notes) { notes = it }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(checked = replay, onCheckedChange = { replay = it })
-            Text("Replay (beaten before)", color = Cream, fontSize = 15.sp)
+            Text("Replay (beaten before)", color = Cream, fontSize = 16.sp)
         }
         Button(
             onClick = {
