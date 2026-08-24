@@ -157,7 +157,7 @@ fun FullScreenMenu(nav: NavHostController, onClose: () -> Unit) {
     val scope = rememberCoroutineScope()
     fun go(route: String) {
         nav.navigate(route) { launchSingleTop = true }
-        scope.launch { kotlinx.coroutines.delay(120); onClose() }
+        scope.launch { kotlinx.coroutines.delay(240); onClose() }
     }
     Box(
         Modifier.fillMaxSize()

@@ -24,7 +24,7 @@ Built by GitHub Actions — no local Android tooling needed.
    no rebuild needed. 44 icons ship built-in; anything else gets an
    initials tile.
 
-## What the app does (v0.7)
+## What the app does (v0.13)
 
 - Top nav bar everywhere: ☰ full-screen menu (Homepage / Completed /
   Now Playing / Stats / Settings), centred logo, + straight to Add.
@@ -43,8 +43,16 @@ Built by GitHub Actions — no local Android tooling needed.
   attach a ready-made collage from the gallery (renamed on save).
 - Stats: games-per-year chart, era breakdown, editable series counts,
   fun facts, clickable platform table.
+- Backlog: queue of games to play, same IGDB-powered add flow,
+  per-item pages, one-tap promote to Now Playing.
+- Random picker: genre/era filters, IGDB-powered spin with box art,
+  gameplay shot, summary, beaten-check, and add buttons.
+- IGDB enrichment (Settings): one pass fetches genres, release year,
+  rating, cover and summary for every beaten game; unlocks the genre
+  and release-decade charts plus extra fun facts. New games enrich
+  automatically on add.
 - Settings: data folder picker (SAF), CSV import, timestamped CSV
-  export to `exports/`.
+  export to `exports/`, IGDB credentials (masked).
 
 ## Data files
 

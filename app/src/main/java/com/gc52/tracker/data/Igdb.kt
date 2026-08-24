@@ -97,7 +97,7 @@ object Igdb {
     data class Details(
         val name: String, val year: Int?, val coverBig: String?,
         val summary: String?, val genres: List<String>, val platforms: List<String>,
-        val screenshots: List<String>
+        val screenshots: List<String>, val rating: Double? = null
     )
 
     val GENRES = linkedMapOf(
@@ -146,12 +146,13 @@ object Igdb {
         } else emptyList()
         return Details(
             o.optString("name"), year, cover,
-            o.optString("summary").ifBlank { null }, names("genres"), names("platforms"), shots
+            o.optString("summary").ifBlank { null }, names("genres"), names("platforms"), shots,
+            if (o.has("total_rating")) o.getDouble("total_rating") else null
         )
     }
 
     private const val DETAIL_FIELDS =
-        "fields name, first_release_date, summary, genres.name, platforms.name, cover.image_id, screenshots.image_id;"
+        "fields name, first_release_date, summary, genres.name, platforms.name, cover.image_id, screenshots.image_id, total_rating;"
 
     /** Best single match for a game name, with summary/genres/screenshots. */
     fun details(ctx: Context, name: String): Details? {

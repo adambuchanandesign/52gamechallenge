@@ -15,7 +15,13 @@ data class Game(
     val imageFile: String?,       // filename inside <folder>/<year>/
     val notes: String?,
     val replay: Boolean = false,
-    val normName: String          // normalized for search/dup detection
+    val normName: String,         // normalized for search/dup detection
+    // IGDB enrichment (nullable = not yet fetched; igdbGenres "-" = looked up, no match)
+    val igdbYear: Int? = null,
+    val igdbGenres: String? = null,   // "|"-separated
+    val igdbCover: String? = null,
+    val igdbRating: Double? = null,
+    val igdbSummary: String? = null
 )
 
 @Entity(tableName = "ideas")
@@ -89,6 +95,8 @@ interface GameDao {
     @Insert suspend fun insert(g: Game): Long
     @Insert suspend fun insertAll(gs: List<Game>)
     @Update suspend fun update(g: Game)
+    @Query("SELECT * FROM game WHERE igdbGenres IS NULL ORDER BY year, seq")
+    suspend fun unenriched(): List<Game>
     @Delete suspend fun delete(g: Game)
     @Query("DELETE FROM games") suspend fun clearGames()
 
@@ -119,7 +127,7 @@ interface GameDao {
     @Query("DELETE FROM backlog WHERE id = :id") suspend fun deleteBacklogById(id: Long)
 }
 
-@Database(entities = [Game::class, Idea::class, Playing::class, Backlog::class], version = 4, exportSchema = false)
+@Database(entities = [Game::class, Idea::class, Playing::class, Backlog::class], version = 5, exportSchema = false)
 abstract class AppDb : RoomDatabase() {
     abstract fun dao(): GameDao
 
@@ -127,7 +135,7 @@ abstract class AppDb : RoomDatabase() {
         @Volatile private var inst: AppDb? = null
         fun get(ctx: Context): AppDb = inst ?: synchronized(this) {
             inst ?: Room.databaseBuilder(ctx.applicationContext, AppDb::class.java, "gc52.db")
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 .build().also { inst = it }
         }
     }
@@ -148,6 +156,16 @@ val MIGRATION_2_3 = object : androidx.room.migration.Migration(2, 3) {
 val MIGRATION_3_4 = object : androidx.room.migration.Migration(3, 4) {
     override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
         db.execSQL("CREATE TABLE IF NOT EXISTS `backlog` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `platform` TEXT NOT NULL, `added` TEXT, `notes` TEXT, `coverUrl` TEXT)")
+    }
+}
+
+val MIGRATION_4_5 = object : androidx.room.migration.Migration(4, 5) {
+    override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `game` ADD COLUMN `igdbYear` INTEGER")
+        db.execSQL("ALTER TABLE `game` ADD COLUMN `igdbGenres` TEXT")
+        db.execSQL("ALTER TABLE `game` ADD COLUMN `igdbCover` TEXT")
+        db.execSQL("ALTER TABLE `game` ADD COLUMN `igdbRating` REAL")
+        db.execSQL("ALTER TABLE `game` ADD COLUMN `igdbSummary` TEXT")
     }
 }
 

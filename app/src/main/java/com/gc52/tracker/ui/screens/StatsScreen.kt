@@ -126,6 +126,62 @@ fun StatsScreen(vm: AppViewModel, nav: NavHostController) {
             }
         }
 
+        // Genres + release decades (from IGDB enrichment)
+        item {
+            val enriched = all.filter { !it.igdbGenres.isNullOrBlank() && it.igdbGenres != "-" }
+            if (enriched.isNotEmpty()) {
+                var pieGenre by remember { mutableStateOf(false) }
+                val genres = enriched.flatMap { it.igdbGenres!!.split("|") }
+                    .groupingBy { it }.eachCount().toList()
+                    .sortedByDescending { it.second }.take(10)
+                Column(Modifier.fillMaxWidth().gradientCard().padding(14.dp)) {
+                    ChartHeader("Genres you play most", pieGenre) { pieGenre = it }
+                    Spacer(Modifier.height(8.dp))
+                    if (pieGenre) PieChart(genres)
+                    else {
+                        val gMax = (genres.maxOfOrNull { it.second } ?: 1).coerceAtLeast(1)
+                        genres.forEach { (g, n) ->
+                            Row(Modifier.padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text(g, color = Cream, fontSize = 14.sp, maxLines = 1,
+                                    modifier = Modifier.width(130.dp))
+                                Box(Modifier.weight(1f).height(10.dp).clip(RoundedCornerShape(5.dp)).background(Surface2)) {
+                                    Box(Modifier.fillMaxHeight().fillMaxWidth(n.toFloat() / gMax)
+                                        .clip(RoundedCornerShape(5.dp)).background(AccentGradient))
+                                }
+                                Text(" $n", color = Muted, fontSize = 14.sp)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        item {
+            val datedIgdb = all.filter { it.igdbYear != null }
+            if (datedIgdb.isNotEmpty()) {
+                var pieDec by remember { mutableStateOf(false) }
+                val decades = datedIgdb.groupingBy { "${(it.igdbYear!! / 10) * 10}s" }.eachCount()
+                    .toList().sortedBy { it.first }
+                Column(Modifier.fillMaxWidth().gradientCard().padding(14.dp)) {
+                    ChartHeader("Release decades you play", pieDec) { pieDec = it }
+                    Spacer(Modifier.height(8.dp))
+                    if (pieDec) PieChart(decades)
+                    else {
+                        val dMax = (decades.maxOfOrNull { it.second } ?: 1).coerceAtLeast(1)
+                        decades.forEach { (d, n) ->
+                            Row(Modifier.padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text(d, color = Cream, fontSize = 15.sp, modifier = Modifier.width(76.dp))
+                                Box(Modifier.weight(1f).height(10.dp).clip(RoundedCornerShape(5.dp)).background(Surface2)) {
+                                    Box(Modifier.fillMaxHeight().fillMaxWidth(n.toFloat() / dMax)
+                                        .clip(RoundedCornerShape(5.dp)).background(AccentGradient))
+                                }
+                                Text(" $n", color = Muted, fontSize = 15.sp)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // Series
         item {
             Column(Modifier.fillMaxWidth().gradientCard().padding(14.dp)) {
@@ -259,6 +315,22 @@ private fun buildFacts(all: List<Game>, platformCount: Int): List<Pair<String, S
     listOf(100, 250, 500, 750, 1000).forEach { m ->
         ordered.getOrNull(m - 1)?.let { g -> facts.add("Game #$m" to "${g.name} (${g.platform}, ${g.year})") }
     }
+    // IGDB-enriched facts
+    val withYear = all.filter { it.igdbYear != null }
+    withYear.minByOrNull { it.igdbYear!! }?.let {
+        facts.add("Oldest game" to "${it.name} (${it.igdbYear})")
+    }
+    if (withYear.isNotEmpty()) {
+        facts.add("Avg release year" to "${withYear.map { it.igdbYear!! }.average().toInt()}")
+    }
+    val rated = all.filter { it.igdbRating != null }
+    rated.maxByOrNull { it.igdbRating!! }?.let {
+        facts.add("Highest rated" to "${it.name} (${it.igdbRating!!.toInt()}/100)")
+    }
+    rated.minByOrNull { it.igdbRating!! }?.let {
+        facts.add("Lowest rated" to "${it.name} (${it.igdbRating!!.toInt()}/100)")
+    }
+
     val replays = all.count { it.replay }
     if (replays > 0) facts.add("Replays logged" to "$replays")
     facts.add("Distinct platforms" to "$platformCount")

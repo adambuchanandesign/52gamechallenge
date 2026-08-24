@@ -1,5 +1,6 @@
 package com.gc52.tracker.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -148,6 +149,7 @@ fun RandomScreen(vm: AppViewModel, nav: NavHostController) {
     var beaten by remember { mutableStateOf<com.gc52.tracker.data.Game?>(null) }
     var spinning by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    var filtersOpen by remember { mutableStateOf(true) }
     val enabled by vm.igdbEnabled.collectAsState()
     val scope = rememberCoroutineScope()
 
@@ -156,7 +158,7 @@ fun RandomScreen(vm: AppViewModel, nav: NavHostController) {
         scope.launch {
             val d = vm.randomGame(genre?.let { Igdb.GENRES[it] }, era?.let { Igdb.ERAS[it] })
             if (d == null) error = "Nothing came back — check IGDB credentials or loosen the filters"
-            else { result = d; beaten = vm.beatenMatch(d.name) }
+            else { result = d; beaten = vm.beatenMatch(d.name); filtersOpen = false }
             spinning = false
         }
     }
@@ -174,32 +176,52 @@ fun RandomScreen(vm: AppViewModel, nav: NavHostController) {
         if (!enabled) {
             Text("Add IGDB credentials in Settings to use the picker.", color = Warn, fontSize = 14.sp)
         }
-        H2("Genre")
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Igdb.GENRES.keys.forEach { g ->
-                FilterChip(selected = genre == g, onClick = { genre = if (genre == g) null else g },
-                    label = { Text(g, fontSize = 13.sp) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = LogoBlue, selectedLabelColor = Cream,
-                        containerColor = Surface1, labelColor = Muted))
+        Row(
+            Modifier.fillMaxWidth().clickable { filtersOpen = !filtersOpen },
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                H2("Filters")
+                if (!filtersOpen) {
+                    Text(
+                        listOfNotNull(genre, era).ifEmpty { listOf("Anything goes") }.joinToString(" · "),
+                        color = Muted, fontSize = 13.sp
+                    )
+                }
+            }
+            Text(if (filtersOpen) "▲" else "▼", color = Muted, fontSize = 14.sp)
+        }
+        if (filtersOpen) {
+            Text("Genre", color = Muted, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Igdb.GENRES.keys.forEach { g ->
+                    FilterChip(selected = genre == g, onClick = { genre = if (genre == g) null else g },
+                        label = { Text(g, fontSize = 13.sp) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = LogoBlue, selectedLabelColor = Cream,
+                            containerColor = Surface1, labelColor = Muted))
+                }
+            }
+            Text("Era", color = Muted, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Igdb.ERAS.keys.forEach { e ->
+                    FilterChip(selected = era == e, onClick = { era = if (era == e) null else e },
+                        label = { Text(e, fontSize = 13.sp) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = LogoBlue, selectedLabelColor = Cream,
+                            containerColor = Surface1, labelColor = Muted))
+                }
             }
         }
-        H2("Era")
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Igdb.ERAS.keys.forEach { e ->
-                FilterChip(selected = era == e, onClick = { era = if (era == e) null else e },
-                    label = { Text(e, fontSize = 13.sp) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = LogoBlue, selectedLabelColor = Cream,
-                        containerColor = Surface1, labelColor = Muted))
-            }
-        }
-        if (result == null) {
-            Button(
-                enabled = enabled && !spinning, onClick = { spin() },
-                colors = ButtonDefaults.buttonColors(containerColor = LogoBlue),
-                modifier = Modifier.fillMaxWidth()
-            ) { Text(if (spinning) "Spinning…" else "Spin 🎲", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
+        Button(
+            enabled = enabled && !spinning, onClick = { spin() },
+            colors = ButtonDefaults.buttonColors(containerColor = LogoBlue),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                if (spinning) "Spinning…" else if (result == null) "Spin 🎲" else "Roll again 🎲",
+                fontWeight = FontWeight.Bold, fontSize = 16.sp
+            )
         }
         error?.let { Text(it, color = Warn, fontSize = 14.sp) }
 
@@ -208,7 +230,8 @@ fun RandomScreen(vm: AppViewModel, nav: NavHostController) {
                 // lead with a gameplay shot (skip the first, which is usually the title screen)
                 (d.screenshots.getOrNull(1) ?: d.screenshots.firstOrNull())?.let { hero ->
                     AsyncImage(model = hero, contentDescription = null,
-                        modifier = Modifier.fillMaxWidth().aspectRatio(1.77f).clip(RoundedCornerShape(10.dp)))
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        modifier = Modifier.fillMaxWidth().aspectRatio(1.33f).clip(RoundedCornerShape(10.dp)))
                 }
                 Row {
                     d.coverBig?.let {

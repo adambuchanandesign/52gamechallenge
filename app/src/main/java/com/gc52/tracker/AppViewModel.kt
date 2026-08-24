@@ -86,6 +86,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     replay = replay, normName = normalizeTitle(name))
             )
             onDone(id)
+            enrichOne(id)
         }
     }
 
@@ -230,6 +231,53 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val d = kotlinx.coroutines.withContext(Dispatchers.IO) { Igdb.details(getApplication(), name) }
         detailsCache[name] = d
         return d
+    }
+
+    // ---- IGDB enrichment ----
+    data class EnrichState(val running: Boolean = false, val done: Int = 0, val total: Int = 0,
+                           val matched: Int = 0, val finishedOnce: Boolean = false)
+    val enrichState = MutableStateFlow(EnrichState())
+    private var enrichJob: kotlinx.coroutines.Job? = null
+
+    private fun enrichedCopy(g: Game, d: Igdb.Details?): Game =
+        if (d == null) g.copy(igdbGenres = "-")
+        else g.copy(
+            igdbYear = d.year,
+            igdbGenres = d.genres.joinToString("|").ifBlank { "-" },
+            igdbCover = d.coverBig,
+            igdbRating = d.rating,
+            igdbSummary = d.summary
+        )
+
+    fun startEnrichment() {
+        if (enrichState.value.running || !igdbEnabled.value) return
+        enrichJob = viewModelScope.launch(Dispatchers.IO) {
+            val todo = dao.unenriched()
+            var matched = 0
+            enrichState.value = EnrichState(running = true, done = 0, total = todo.size)
+            todo.forEachIndexed { i, g ->
+                if (!kotlinx.coroutines.currentCoroutineContext().isActive) return@launch
+                val d = Igdb.details(getApplication(), g.name)
+                if (d != null) matched++
+                dao.update(enrichedCopy(g, d))
+                enrichState.value = EnrichState(true, i + 1, todo.size, matched)
+                kotlinx.coroutines.delay(280)   // stay well under IGDB's 4 req/s
+            }
+            enrichState.value = enrichState.value.copy(running = false, finishedOnce = true)
+        }
+    }
+    fun cancelEnrichment() {
+        enrichJob?.cancel()
+        enrichState.value = enrichState.value.copy(running = false)
+    }
+    /** Enrich a single new game in the background (fire and forget). */
+    private fun enrichOne(id: Long) {
+        if (!igdbEnabled.value) return
+        viewModelScope.launch(Dispatchers.IO) {
+            val g = dao.byId(id) ?: return@launch
+            if (g.igdbGenres != null) return@launch
+            dao.update(enrichedCopy(g, Igdb.details(getApplication(), g.name)))
+        }
     }
 
     // ---- random picker ----

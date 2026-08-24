@@ -205,6 +205,34 @@ fun SettingsScreen(vm: AppViewModel, nav: NavHostController) {
             }
         }
 
+        Column(Modifier.fillMaxWidth().gradientCard().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("IGDB enrichment", color = LogoBlueLight, fontWeight = FontWeight.Bold)
+            Text("Fetches genres, release year, rating, cover and summary for every beaten game (one pass, a few minutes). Unlocks genre and release-decade stats. New games enrich automatically when added.",
+                color = Muted, fontSize = 13.sp)
+            val enrich by vm.enrichState.collectAsState()
+            val gamesAll by vm.games.collectAsState()
+            val enrichedCount = gamesAll.count { it.igdbGenres != null }
+            Text("Enriched: $enrichedCount / ${gamesAll.size} games",
+                color = Cream, fontSize = 14.sp)
+            if (enrich.running) {
+                LinearProgressIndicator(
+                    progress = { if (enrich.total == 0) 0f else enrich.done.toFloat() / enrich.total },
+                    modifier = Modifier.fillMaxWidth(), color = LogoBlueLight, trackColor = Surface2
+                )
+                Text("${enrich.done}/${enrich.total} — ${enrich.matched} matched",
+                    color = Muted, fontSize = 13.sp)
+                OutlinedButton(onClick = { vm.cancelEnrichment() }) { Text("Pause") }
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Button(onClick = { vm.startEnrichment() },
+                        colors = ButtonDefaults.buttonColors(containerColor = LogoBlue)) {
+                        Text(if (enrichedCount == 0) "Run enrichment" else "Resume / update")
+                    }
+                    if (enrich.finishedOnce) Text("Done ✓", color = Good, fontSize = 14.sp)
+                }
+            }
+        }
+
         Column(Modifier.fillMaxWidth().gradientCard().padding(14.dp)) {
             Text("Roadmap", color = LogoBlueLight, fontWeight = FontWeight.Bold)
             Text("Coming next: box art, platform icon manager, ideas backlog.",
