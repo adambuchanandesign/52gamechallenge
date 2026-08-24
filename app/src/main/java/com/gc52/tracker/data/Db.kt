@@ -95,7 +95,7 @@ interface GameDao {
     @Insert suspend fun insert(g: Game): Long
     @Insert suspend fun insertAll(gs: List<Game>)
     @Update suspend fun update(g: Game)
-    @Query("SELECT * FROM game WHERE igdbGenres IS NULL ORDER BY year, seq")
+    @Query("SELECT * FROM games WHERE igdbGenres IS NULL ORDER BY year, seq")
     suspend fun unenriched(): List<Game>
     @Delete suspend fun delete(g: Game)
     @Query("DELETE FROM games") suspend fun clearGames()
@@ -161,11 +161,11 @@ val MIGRATION_3_4 = object : androidx.room.migration.Migration(3, 4) {
 
 val MIGRATION_4_5 = object : androidx.room.migration.Migration(4, 5) {
     override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
-        db.execSQL("ALTER TABLE `game` ADD COLUMN `igdbYear` INTEGER")
-        db.execSQL("ALTER TABLE `game` ADD COLUMN `igdbGenres` TEXT")
-        db.execSQL("ALTER TABLE `game` ADD COLUMN `igdbCover` TEXT")
-        db.execSQL("ALTER TABLE `game` ADD COLUMN `igdbRating` REAL")
-        db.execSQL("ALTER TABLE `game` ADD COLUMN `igdbSummary` TEXT")
+        db.execSQL("ALTER TABLE `games` ADD COLUMN `igdbYear` INTEGER")
+        db.execSQL("ALTER TABLE `games` ADD COLUMN `igdbGenres` TEXT")
+        db.execSQL("ALTER TABLE `games` ADD COLUMN `igdbCover` TEXT")
+        db.execSQL("ALTER TABLE `games` ADD COLUMN `igdbRating` REAL")
+        db.execSQL("ALTER TABLE `games` ADD COLUMN `igdbSummary` TEXT")
     }
 }
 
