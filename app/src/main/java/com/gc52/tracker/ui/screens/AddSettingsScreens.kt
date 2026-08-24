@@ -229,10 +229,7 @@ fun SettingsScreen(vm: AppViewModel, nav: NavHostController) {
                 AlertDialog(
                     onDismissRequest = { vm.cancelRestore() },
                     title = { Text("Replace all data?") },
-                    text = { Text("This backup contains:
-${pv.text}
-
-Current data will be replaced.") },
+                    text = { Text("This backup contains:\n${pv.text}\n\nCurrent data will be replaced.") },
                     confirmButton = {
                         TextButton(onClick = { vm.confirmRestore() }) { Text("Restore", color = Warn) }
                     },

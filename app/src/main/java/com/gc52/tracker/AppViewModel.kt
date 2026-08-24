@@ -271,8 +271,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             else restorePreview.value = RestorePreview(parsed,
                 "${parsed.games.size} beaten · ${parsed.playing.size} now playing · " +
                 "${parsed.backlog.size} backlog" +
-                (parsed.exportedAt?.let { "
-Exported ${it.take(16).replace('T', ' ')}" } ?: ""))
+                (parsed.exportedAt?.let { "\nExported ${it.take(16).replace('T', ' ')}" } ?: ""))
         }
     }
     fun confirmRestore() {
