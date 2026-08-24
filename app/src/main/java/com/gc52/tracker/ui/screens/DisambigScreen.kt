@@ -58,19 +58,23 @@ fun DisambigScreen(vm: AppViewModel, nav: NavHostController) {
             }
         }
 
-        // Always-first manual option
-        if (query.isNotEmpty()) item {
-            Row(
-                Modifier.fillMaxWidth().gradientCard()
-                    .clickable { pick(query, emptyList(), null) }
-                    .padding(14.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("➕", fontSize = 19.sp, modifier = Modifier.padding(end = 12.dp))
-                Column {
-                    Text("Add new game manually", color = Cream, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Text("Type the details yourself", color = Muted, fontSize = 13.sp)
+        // Manual entry - expanded by default when nothing is being searched
+        item {
+            var manualOpen by remember { mutableStateOf(query.isEmpty()) }
+            Column(Modifier.fillMaxWidth().gradientCard().padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    Modifier.fillMaxWidth().clickable { manualOpen = !manualOpen },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("➕", fontSize = 19.sp, modifier = Modifier.padding(end = 12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Add game manually", color = Cream, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text("Type the details yourself", color = Muted, fontSize = 13.sp)
+                    }
+                    Text(if (manualOpen) "▲" else "▼", color = Muted, fontSize = 14.sp)
                 }
+                if (manualOpen) ManualNpForm(vm, nav, prefill = query)
             }
         }
 
@@ -115,4 +119,41 @@ fun DisambigScreen(vm: AppViewModel, nav: NavHostController) {
         item { Spacer(Modifier.height(16.dp)) }
     }
 
+}
+
+@Composable
+fun ManualNpForm(vm: AppViewModel, nav: NavHostController, prefill: String) {
+    var name by remember(prefill) { mutableStateOf(prefill) }
+    var platform by remember { mutableStateOf("") }
+    var notes by remember { mutableStateOf("") }
+    val existing by vm.platforms.collectAsState()
+    val exact = existing.any { it.equals(platform.trim(), ignoreCase = true) }
+    val close = remember(platform, existing) {
+        val n = com.gc52.tracker.data.normalizeTitle(platform)
+        if (n.isBlank()) emptyList()
+        else existing.filter {
+            val e = com.gc52.tracker.data.normalizeTitle(it)
+            !it.equals(platform.trim(), true) && (e.contains(n) || n.contains(e))
+        }.take(4)
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Field("Game", name) { name = it }
+        Field("Platform", platform) { platform = it }
+        if (platform.isNotBlank() && !exact && close.isNotEmpty()) {
+            Text("⚠ Similar platform exists — reuse it to keep stats tidy:", color = Warn, fontSize = 13.sp)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                close.forEach { m -> SuggestionChip(onClick = { platform = m }, label = { Text(m, fontSize = 13.sp) }) }
+            }
+        }
+        Field("Notes (where you're up to)", notes) { notes = it }
+        Button(
+            enabled = name.isNotBlank() && platform.isNotBlank(),
+            onClick = {
+                vm.addPlaying(name, platform, notes)
+                vm.query.value = ""
+                nav.navigate("playing") { popUpTo("home"); launchSingleTop = true }
+            },
+            colors = ButtonDefaults.buttonColors(containerColor = LogoBlue)
+        ) { Text("Start playing", fontWeight = FontWeight.Bold) }
+    }
 }

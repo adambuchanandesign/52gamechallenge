@@ -188,8 +188,13 @@ fun SettingsScreen(vm: AppViewModel, nav: NavHostController) {
             var igdbId by remember { mutableStateOf(com.gc52.tracker.data.Igdb.clientId(ctx)) }
             var igdbSecret by remember { mutableStateOf(com.gc52.tracker.data.Igdb.clientSecret(ctx)) }
             val igdbStatus by vm.igdbTestStatus.collectAsState()
-            Field("Client ID", igdbId) { igdbId = it }
-            Field("Client Secret", igdbSecret) { igdbSecret = it }
+            var reveal by remember { mutableStateOf(false) }
+            SecretField("Client ID", igdbId, reveal) { igdbId = it }
+            SecretField("Client Secret", igdbSecret, reveal) { igdbSecret = it }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(checked = reveal, onCheckedChange = { reveal = it })
+                Text("Show credentials", color = Muted, fontSize = 14.sp)
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = { vm.saveIgdbCreds(igdbId, igdbSecret) },
                     colors = ButtonDefaults.buttonColors(containerColor = LogoBlue)) { Text("Save") }
@@ -206,4 +211,19 @@ fun SettingsScreen(vm: AppViewModel, nav: NavHostController) {
                 color = Muted, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SecretField(label: String, value: String, reveal: Boolean, onChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = value, onValueChange = onChange, label = { Text(label, color = Muted) },
+        modifier = Modifier.fillMaxWidth(), singleLine = true,
+        visualTransformation = if (reveal) androidx.compose.ui.text.input.VisualTransformation.None
+            else androidx.compose.ui.text.input.PasswordVisualTransformation(),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = LogoBlueLight, unfocusedBorderColor = Muted.copy(alpha = 0.35f),
+            focusedTextColor = Cream, unfocusedTextColor = Cream
+        )
+    )
 }

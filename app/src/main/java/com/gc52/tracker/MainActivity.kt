@@ -84,7 +84,7 @@ fun AppNav(nav: NavHostController) {
         if (barVisible) 0f else -barHPx, label = "barOffset"
     )
 
-    Box(Modifier.fillMaxSize().nestedScroll(conn).clipToBounds()) {
+    Box(Modifier.fillMaxSize().navigationBarsPadding().nestedScroll(conn).clipToBounds()) {
         Box(
             Modifier
                 .layout { measurable, constraints ->
@@ -100,6 +100,7 @@ fun AppNav(nav: NavHostController) {
                 }
                 .graphicsLayer { translationY = barHPx + barOffset }
         ) {
+            Box(Modifier.fillMaxSize().padding(bottom = 64.dp)) {
             NavHost(navController = nav, startDestination = "home") {
                 composable("home") { HomeScreen(vm, nav) }
                 composable("games") { GamesScreen(vm, nav) }
@@ -127,12 +128,13 @@ fun AppNav(nav: NavHostController) {
                 }
                 composable("settings") { SettingsScreen(vm, nav) }
             }
+            }
         }
         TopBar(
             nav,
             onMenu = { menuOpen = true },
             modifier = Modifier.align(Alignment.TopCenter)
-                .offset { androidx.compose.ui.unit.IntOffset(0, barOffset.toInt()) }
+                .graphicsLayer { translationY = barOffset }
         )
         if (menuOpen) FullScreenMenu(nav) { menuOpen = false }
     }
@@ -182,23 +184,24 @@ fun FullScreenMenu(nav: NavHostController, onClose: () -> Unit) {
 
 @Composable
 fun TopBar(nav: NavHostController, onMenu: () -> Unit, modifier: Modifier = Modifier) {
-    Column(modifier) {
-        Box(Modifier.fillMaxWidth().height(63.dp).background(Surface2)) {
-            IconButton(onClick = onMenu, modifier = Modifier.align(Alignment.CenterStart)) {
-                Icon(Icons.Filled.Menu, "Menu", tint = Cream)
-            }
-            Image(
-                painter = painterResource(R.drawable.logo_52gc),
-                contentDescription = "#52GameChallenge",
-                modifier = Modifier.align(Alignment.Center).height(48.dp)
-                    .clickable { nav.navigate("home") { launchSingleTop = true } },
-                contentScale = ContentScale.Fit
-            )
-            IconButton(onClick = { nav.navigate("add") }, modifier = Modifier.align(Alignment.CenterEnd)) {
-                Icon(Icons.Filled.Add, "Add beaten game", tint = LogoBlueLight)
-            }
+    Box(modifier.fillMaxWidth().height(64.dp).background(Surface2)) {
+        IconButton(onClick = onMenu, modifier = Modifier.align(Alignment.CenterStart)) {
+            Icon(Icons.Filled.Menu, "Menu", tint = Cream)
         }
-        HorizontalDivider(thickness = 1.dp, color = LogoBlue.copy(alpha = 0.35f))
+        Image(
+            painter = painterResource(R.drawable.logo_52gc),
+            contentDescription = "#52GameChallenge",
+            modifier = Modifier.align(Alignment.Center).height(48.dp)
+                .clickable { nav.navigate("home") { launchSingleTop = true } },
+            contentScale = ContentScale.Fit
+        )
+        IconButton(onClick = { nav.navigate("add") }, modifier = Modifier.align(Alignment.CenterEnd)) {
+            Icon(Icons.Filled.Add, "Add beaten game", tint = LogoBlueLight)
+        }
+        HorizontalDivider(
+            thickness = 1.dp, color = LogoBlue.copy(alpha = 0.35f),
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 }
 
