@@ -123,18 +123,21 @@ fun FullScreenMenu(nav: NavHostController, onClose: () -> Unit) {
             .background(Bg.copy(alpha = 0.98f))
             .clickable(onClick = onClose)
     ) {
-        IconButton(onClick = onClose, modifier = Modifier.align(Alignment.TopEnd).padding(12.dp)) {
-            Icon(Icons.Filled.Close, "Close", tint = Cream)
-        }
         Column(
             Modifier.align(Alignment.Center),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(26.dp)
         ) {
+            Icon(
+                Icons.Filled.Home, "Homepage", tint = Cream,
+                modifier = Modifier.size(38.dp).clickable {
+                    onClose(); nav.navigate("home") { launchSingleTop = true }
+                }
+            )
             listOf(
-                "Homepage" to "home",
                 "Completed" to "games",
                 "Now Playing" to "playing",
+                "Add Game" to "add",
                 "Stats" to "stats",
                 "Settings" to "settings"
             ).forEach { (label, route) ->
@@ -145,6 +148,10 @@ fun FullScreenMenu(nav: NavHostController, onClose: () -> Unit) {
                         nav.navigate(route) { launchSingleTop = true }
                     }.padding(horizontal = 24.dp, vertical = 4.dp)
                 )
+            }
+            Spacer(Modifier.height(6.dp))
+            IconButton(onClick = onClose) {
+                Icon(Icons.Filled.Close, "Close", tint = Muted, modifier = Modifier.size(30.dp))
             }
         }
     }

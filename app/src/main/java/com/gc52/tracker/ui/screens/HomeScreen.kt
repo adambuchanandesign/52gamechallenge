@@ -80,7 +80,7 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 H1("Now playing", Modifier.weight(1f))
-                TextButton(onClick = { showAddPlaying = true }) { Text("+ Add", color = LogoBlueLight) }
+                TextButton(onClick = { nav.navigate("disambig") }) { Text("+ Add", color = LogoBlueLight) }
             }
         }
         if (playing.isEmpty()) {

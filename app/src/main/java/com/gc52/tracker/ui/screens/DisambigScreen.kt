@@ -22,15 +22,18 @@ import com.gc52.tracker.GameRow
 import com.gc52.tracker.data.Game
 import com.gc52.tracker.data.Igdb
 import com.gc52.tracker.ui.theme.*
+import com.gc52.tracker.AppViewModel.IgdbUi
 
 @Composable
 fun DisambigScreen(vm: AppViewModel, nav: NavHostController) {
-    val query = vm.lastIgdbQuery.ifBlank { vm.query.value.trim() }
-    val hits = vm.lastIgdbHits
+    val queryState by vm.query.collectAsState()
+    val query = queryState.trim()
+    val igdb by vm.igdbUi.collectAsState()
+    val hits = (igdb as? AppViewModel.IgdbUi.Loaded)?.hits ?: emptyList()
     var similar by remember { mutableStateOf<List<Game>>(emptyList()) }
     // (name, suggested platforms) for the prefilled Now Playing dialog
     var picking by remember { mutableStateOf<Pair<String, List<String>>?>(null) }
-    LaunchedEffect(query) { similar = vm.duplicatesOf(query) }
+    LaunchedEffect(query) { similar = if (query.length >= 2) vm.duplicatesOf(query) else emptyList() }
 
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
@@ -38,15 +41,23 @@ fun DisambigScreen(vm: AppViewModel, nav: NavHostController) {
                 IconButton(onClick = { nav.popBackStack() }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Muted)
                 }
-                Column {
-                    H1("Which game is it?")
-                    Text("\u201C$query\u201D", color = Muted, fontSize = 14.sp)
-                }
+                H1("Add to Now playing")
+            }
+        }
+        item { BeatenSearch(vm) }
+        item {
+            when (igdb) {
+                AppViewModel.IgdbUi.Loading -> Text("Searching IGDB…", color = Muted, fontSize = 13.sp)
+                AppViewModel.IgdbUi.Error -> Text("IGDB error — check credentials in Settings",
+                    color = Warn, fontSize = 13.sp)
+                AppViewModel.IgdbUi.Off -> Text("Tip: add IGDB credentials in Settings for live results",
+                    color = Muted, fontSize = 13.sp)
+                else -> {}
             }
         }
 
         // Always-first manual option
-        item {
+        if (query.isNotEmpty()) item {
             Row(
                 Modifier.fillMaxWidth().gradientCard()
                     .clickable { picking = query to emptyList() }
@@ -61,7 +72,7 @@ fun DisambigScreen(vm: AppViewModel, nav: NavHostController) {
             }
         }
 
-        if (hits.isEmpty()) {
+        if (hits.isEmpty() && query.length >= 2 && igdb is AppViewModel.IgdbUi.Loaded) {
             item { Text("No IGDB matches for this search.", color = Muted, fontSize = 14.sp) }
         }
         items(hits, key = { it.id }) { h ->

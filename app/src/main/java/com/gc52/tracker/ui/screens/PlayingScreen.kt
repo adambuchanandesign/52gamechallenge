@@ -30,7 +30,7 @@ fun PlayingScreen(vm: AppViewModel, nav: NavHostController) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Muted)
                 }
                 H1("Now playing", Modifier.weight(1f))
-                TextButton(onClick = { showAdd = true }) { Text("+ Add", color = LogoBlueLight) }
+                TextButton(onClick = { nav.navigate("disambig") }) { Text("+ Add", color = LogoBlueLight) }
             }
         }
         item { BeatenSearch(vm) }

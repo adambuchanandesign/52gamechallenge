@@ -181,6 +181,25 @@ fun SettingsScreen(vm: AppViewModel, nav: NavHostController) {
             exportStatus?.let { Text(it, color = if (it.startsWith("Exported")) Good else Warn, fontSize = 15.sp) }
         }
 
+        Column(Modifier.fillMaxWidth().gradientCard().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("IGDB live search (optional)", color = LogoBlueLight, fontWeight = FontWeight.Bold)
+            Text("Free Twitch developer credentials enable live game search with box art. dev.twitch.tv → Register Your Application → paste the Client ID and Secret here.",
+                color = Muted, fontSize = 13.sp)
+            var igdbId by remember { mutableStateOf(com.gc52.tracker.data.Igdb.clientId(ctx)) }
+            var igdbSecret by remember { mutableStateOf(com.gc52.tracker.data.Igdb.clientSecret(ctx)) }
+            val igdbStatus by vm.igdbTestStatus.collectAsState()
+            Field("Client ID", igdbId) { igdbId = it }
+            Field("Client Secret", igdbSecret) { igdbSecret = it }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = { vm.saveIgdbCreds(igdbId, igdbSecret) },
+                    colors = ButtonDefaults.buttonColors(containerColor = LogoBlue)) { Text("Save") }
+                OutlinedButton(onClick = { vm.saveIgdbCreds(igdbId, igdbSecret); vm.testIgdb() }) { Text("Save & test") }
+            }
+            igdbStatus?.let {
+                Text(it, color = if (it.startsWith("Connected")) Good else Muted, fontSize = 14.sp)
+            }
+        }
+
         Column(Modifier.fillMaxWidth().gradientCard().padding(14.dp)) {
             Text("Roadmap", color = LogoBlueLight, fontWeight = FontWeight.Bold)
             Text("Coming next: box art, platform icon manager, ideas backlog.",
