@@ -1,6 +1,7 @@
 package com.gc52.tracker.ui.screens
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -193,6 +194,35 @@ fun BeatenSearch(vm: AppViewModel) {
 fun androidx.compose.foundation.lazy.LazyListScope.searchResults(vm: AppViewModel, nav: NavHostController) {
     item {
         val query by vm.query.collectAsState()
+        val igdb by vm.igdbUi.collectAsState()
+        if (query.trim().length >= 2) {
+            when (val st = igdb) {
+                is AppViewModel.IgdbUi.Loaded -> {
+                    Row(
+                        Modifier.fillMaxWidth().gradientCard()
+                            .clickable { nav.navigate("disambig") }
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("${st.hits.size} result" + (if (st.hits.size == 1) "" else "s") +
+                                    " on IGDB", color = Cream, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                            Text("for \u201C${st.query}\u201D — tap to pick one", color = Muted, fontSize = 13.sp)
+                        }
+                        Text("→", color = LogoBlueLight, fontSize = 19.sp)
+                    }
+                }
+                AppViewModel.IgdbUi.Loading -> Text("Searching IGDB…", color = Muted, fontSize = 13.sp)
+                AppViewModel.IgdbUi.Error -> Text("IGDB error — check credentials in Settings",
+                    color = Warn, fontSize = 13.sp)
+                AppViewModel.IgdbUi.Off -> Text("Tip: add IGDB credentials in Settings for live game search",
+                    color = Muted, fontSize = 12.sp)
+                else -> {}
+            }
+        }
+    }
+    item {
+        val query by vm.query.collectAsState()
         val results by vm.searchResults.collectAsState()
         if (query.trim().length >= 2) {
             if (results.isEmpty()) {
@@ -266,9 +296,14 @@ fun NavButton(modifier: Modifier, label: String, icon: androidx.compose.ui.graph
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddPlayingDialog(onAdd: (String, String, String?) -> Unit, onDismiss: () -> Unit) {
-    var n by remember { mutableStateOf("") }
-    var pf by remember { mutableStateOf("") }
+fun AddPlayingDialog(
+    initialName: String = "",
+    platformSuggestions: List<String> = emptyList(),
+    onAdd: (String, String, String?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var n by remember { mutableStateOf(initialName) }
+    var pf by remember { mutableStateOf(if (platformSuggestions.size == 1) platformSuggestions[0] else "") }
     var no by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -277,6 +312,14 @@ fun AddPlayingDialog(onAdd: (String, String, String?) -> Unit, onDismiss: () -> 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(value = n, onValueChange = { n = it }, label = { Text("Game") }, singleLine = true)
                 OutlinedTextField(value = pf, onValueChange = { pf = it }, label = { Text("Platform") }, singleLine = true)
+                if (platformSuggestions.isNotEmpty()) {
+                    Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        platformSuggestions.forEach { sug ->
+                            SuggestionChip(onClick = { pf = sug }, label = { Text(sug, fontSize = 12.sp) })
+                        }
+                    }
+                }
                 OutlinedTextField(value = no, onValueChange = { no = it }, label = { Text("Notes (where you're up to)") })
             }
         },

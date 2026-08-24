@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -96,6 +97,7 @@ fun AppNav(nav: NavHostController) {
                 }
                 composable("stats") { StatsScreen(vm, nav) }
                 composable("playing") { PlayingScreen(vm, nav) }
+                composable("disambig") { DisambigScreen(vm, nav) }
                 composable("collage/{id}") { back ->
                     val id = back.arguments?.getString("id")?.toLongOrNull() ?: return@composable
                     CollageScreen(vm, nav, id)

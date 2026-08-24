@@ -116,6 +116,51 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     suspend fun game(id: Long): Game? = dao.byId(id)
 
+    // ---- IGDB live search ----
+    sealed class IgdbUi {
+        object Off : IgdbUi()
+        object Idle : IgdbUi()
+        object Loading : IgdbUi()
+        data class Loaded(val query: String, val hits: List<Igdb.Hit>) : IgdbUi()
+        object Error : IgdbUi()
+    }
+    val igdbEnabled = MutableStateFlow(Igdb.enabled(app))
+    val igdbUi = MutableStateFlow<IgdbUi>(if (Igdb.enabled(app)) IgdbUi.Idle else IgdbUi.Off)
+    var lastIgdbQuery: String = ""
+        private set
+    var lastIgdbHits: List<Igdb.Hit> = emptyList()
+        private set
+
+    init {
+        viewModelScope.launch {
+            query.map { it.trim() }.debounce(350).collectLatest { q ->
+                if (!igdbEnabled.value) { igdbUi.value = IgdbUi.Off; return@collectLatest }
+                if (q.length < 2) { igdbUi.value = IgdbUi.Idle; return@collectLatest }
+                igdbUi.value = IgdbUi.Loading
+                val hits = kotlinx.coroutines.withContext(Dispatchers.IO) { Igdb.search(getApplication(), q) }
+                if (hits == null) igdbUi.value = IgdbUi.Error
+                else {
+                    lastIgdbQuery = q; lastIgdbHits = hits
+                    igdbUi.value = IgdbUi.Loaded(q, hits)
+                }
+            }
+        }
+    }
+
+    val igdbTestStatus = MutableStateFlow<String?>(null)
+    fun saveIgdbCreds(id: String, secret: String) {
+        Igdb.saveCreds(getApplication(), id, secret)
+        igdbEnabled.value = Igdb.enabled(getApplication())
+        if (!igdbEnabled.value) igdbUi.value = IgdbUi.Off else igdbUi.value = IgdbUi.Idle
+        igdbTestStatus.value = "Saved"
+    }
+    fun testIgdb() {
+        viewModelScope.launch(Dispatchers.IO) {
+            igdbTestStatus.value = "Testing…"
+            igdbTestStatus.value = Igdb.testConnection(getApplication())
+        }
+    }
+
     // ---- now playing ----
     val playing = dao.playing().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
