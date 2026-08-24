@@ -63,12 +63,12 @@ fun AddScreen(vm: AppViewModel, nav: NavHostController, playingId: Long = -1L) {
         Field("Game name", name) { name = it }
         if (dups.isNotEmpty()) {
             Column(Modifier.fillMaxWidth().gradientCard().padding(12.dp)) {
-                Text("⚠ Possible duplicate:", color = Warn, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text("⚠ Possible duplicate:", color = Warn, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 dups.take(5).forEach { d ->
-                    Text("• ${d.name} (${d.platform}, ${d.year})", color = Cream, fontSize = 13.sp,
+                    Text("• ${d.name} (${d.platform}, ${d.year})", color = Cream, fontSize = 14.sp,
                         modifier = Modifier.padding(top = 4.dp).clickable { nav.navigate("detail/${d.id}") })
                 }
-                Text("Tick 'Replay' below if this is intentional.", color = Muted, fontSize = 12.sp,
+                Text("Tick 'Replay' below if this is intentional.", color = Muted, fontSize = 13.sp,
                     modifier = Modifier.padding(top = 6.dp))
             }
         }
@@ -95,11 +95,11 @@ fun AddScreen(vm: AppViewModel, nav: NavHostController, playingId: Long = -1L) {
         }
 
         Column(Modifier.fillMaxWidth().gradientCard().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("Collage", color = LogoBlueLight, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text("Collage", color = LogoBlueLight, fontWeight = FontWeight.Bold, fontSize = 15.sp)
             Text(
                 if (picked == null) "Made one outside the app? Pick it and it'll be copied into the year folder and renamed to match the collection."
                 else "✓ Image selected — will be saved as ${year}-XXX - ${name.ifBlank { "…" }} (${platform.ifBlank { "…" }})",
-                color = if (picked == null) Muted else Good, fontSize = 12.sp
+                color = if (picked == null) Muted else Good, fontSize = 13.sp
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = { pickImage.launch("image/*") }) {
@@ -121,7 +121,7 @@ fun AddScreen(vm: AppViewModel, nav: NavHostController, playingId: Long = -1L) {
             modifier = Modifier.fillMaxWidth()
         ) { Text("Save", fontWeight = FontWeight.Bold) }
         Text("The in-app collage builder arrives in the next phase.",
-            color = Muted, fontSize = 12.sp)
+            color = Muted, fontSize = 13.sp)
         Spacer(Modifier.height(20.dp))
     }
 }
@@ -154,8 +154,8 @@ fun SettingsScreen(vm: AppViewModel, nav: NavHostController) {
         Column(Modifier.fillMaxWidth().gradientCard().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Data folder", color = LogoBlueLight, fontWeight = FontWeight.Bold)
             Text("Your 52GameChallenge folder with the year folders, 52gc-import.csv, and optional platform-icons/.",
-                color = Muted, fontSize = 12.sp)
-            Text(folder, color = Cream, fontSize = 13.sp)
+                color = Muted, fontSize = 13.sp)
+            Text(folder, color = Cream, fontSize = 14.sp)
             Button(onClick = { pickFolder.launch(null) },
                 colors = ButtonDefaults.buttonColors(containerColor = LogoBlue)) { Text("Choose folder") }
         }
@@ -163,26 +163,26 @@ fun SettingsScreen(vm: AppViewModel, nav: NavHostController) {
         Column(Modifier.fillMaxWidth().gradientCard().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Import", color = LogoBlueLight, fontWeight = FontWeight.Bold)
             Text("Loads 52gc-import.csv from the data folder. Replaces the current database.",
-                color = Muted, fontSize = 12.sp)
+                color = Muted, fontSize = 13.sp)
             Button(onClick = { vm.runImport(null) },
                 colors = ButtonDefaults.buttonColors(containerColor = LogoBlue)) { Text("Import now") }
-            status?.let { Text(it, color = if (it.startsWith("Imported")) Good else Warn, fontSize = 13.sp) }
+            status?.let { Text(it, color = if (it.startsWith("Imported")) Good else Warn, fontSize = 14.sp) }
         }
 
         Column(Modifier.fillMaxWidth().gradientCard().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Export", color = LogoBlueLight, fontWeight = FontWeight.Bold)
             Text("Writes a timestamped CSV of everything (opens in Excel, and re-imports here) into exports/ in the data folder.",
-                color = Muted, fontSize = 12.sp)
+                color = Muted, fontSize = 13.sp)
             val exportStatus by vm.exportStatus.collectAsState()
             Button(onClick = { vm.runExport() },
                 colors = ButtonDefaults.buttonColors(containerColor = LogoBlue)) { Text("Export now") }
-            exportStatus?.let { Text(it, color = if (it.startsWith("Exported")) Good else Warn, fontSize = 13.sp) }
+            exportStatus?.let { Text(it, color = if (it.startsWith("Exported")) Good else Warn, fontSize = 14.sp) }
         }
 
         Column(Modifier.fillMaxWidth().gradientCard().padding(14.dp)) {
             Text("Roadmap", color = LogoBlueLight, fontWeight = FontWeight.Bold)
             Text("Coming next: box art, platform icon manager, ideas backlog.",
-                color = Muted, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+                color = Muted, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
         }
     }
 }

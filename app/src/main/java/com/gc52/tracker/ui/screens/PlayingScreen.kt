@@ -37,7 +37,7 @@ fun PlayingScreen(vm: AppViewModel, nav: NavHostController) {
         searchResults(vm, nav)
 
         if (playing.isEmpty()) {
-            item { Text("Nothing on the go right now.", color = Muted, fontSize = 13.sp) }
+            item { Text("Nothing on the go right now.", color = Muted, fontSize = 14.sp) }
         }
         items(playing, key = { it.id }) { p ->
             Row(
@@ -47,9 +47,9 @@ fun PlayingScreen(vm: AppViewModel, nav: NavHostController) {
                 PlatformIcon(p.platform, 30)
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(p.name, color = Cream, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1)
-                    Text(p.platform + (p.started?.let { " · since $it" } ?: ""), color = Muted, fontSize = 11.sp)
-                    p.notes?.let { Text(it, color = Muted, fontSize = 11.sp, maxLines = 2) }
+                    Text(p.name, color = Cream, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1)
+                    Text(p.platform + (p.started?.let { " · since $it" } ?: ""), color = Muted, fontSize = 13.sp)
+                    p.notes?.let { Text(it, color = Muted, fontSize = 13.sp, maxLines = 2) }
                 }
                 TextButton(onClick = { nav.navigate("add?playing=" + p.id) }) {
                     Text("Beaten!", color = Good, fontWeight = FontWeight.Bold)

@@ -9,7 +9,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -41,23 +40,8 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                androidx.compose.foundation.Image(
-                    painter = androidx.compose.ui.res.painterResource(com.gc52.tracker.R.drawable.logo_52gc),
-                    contentDescription = "#52GameChallenge",
-                    modifier = Modifier.weight(1f).height(96.dp),
-                    alignment = Alignment.CenterStart,
-                    contentScale = androidx.compose.ui.layout.ContentScale.Fit
-                )
-                IconButton(onClick = { nav.navigate("settings") }) {
-                    Icon(Icons.Filled.Settings, "Settings", tint = Muted)
-                }
-            }
-        }
-
         // Clickable stat cards
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -88,6 +72,7 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
         searchResults(vm, nav)
 
         // ---- Now playing ----
+        item { SectionBreak() }
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 H1("Now playing", Modifier.weight(1f))
@@ -97,7 +82,7 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
         if (playing.isEmpty()) {
             item {
                 Text("Nothing on the go — add what you're partway through so you don't forget.",
-                    color = Muted, fontSize = 12.sp)
+                    color = Muted, fontSize = 13.sp)
             }
         } else {
             item {
@@ -114,6 +99,7 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
         }
 
         // ---- Browse by year ----
+        item { SectionBreak() }
         item { H1("Browse by year") }
         items(yearCounts.sortedByDescending { it.year }.chunked(2)) { pair ->
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -125,7 +111,7 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text("${yc.year}", color = Cream, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Text("${yc.n} games", color = Muted, fontSize = 12.sp)
+                        Text("${yc.n} games", color = Muted, fontSize = 13.sp)
                     }
                 }
                 if (pair.size == 1) Spacer(Modifier.weight(1f))
@@ -133,6 +119,7 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
         }
 
         // ---- Stats ----
+        item { SectionBreak() }
         item { H1("Stats") }
         item { H2("Most beaten platforms") }
         items(platformCounts.take(5)) { pc ->
@@ -144,7 +131,7 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
             ) {
                 PlatformIcon(pc.platform, 28)
                 Spacer(Modifier.width(10.dp))
-                Text(pc.platform, color = Cream, modifier = Modifier.weight(1f), fontSize = 14.sp)
+                Text(pc.platform, color = Cream, modifier = Modifier.weight(1f), fontSize = 15.sp)
                 Text("${pc.n}", color = LogoBlueLight, fontWeight = FontWeight.Bold)
             }
         }
@@ -164,6 +151,13 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
 }
 
 /* ---------- shared pieces (also used by the Now Playing page) ---------- */
+
+@Composable
+fun SectionBreak() {
+    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+        HorizontalDivider(thickness = 1.dp, color = Muted.copy(alpha = 0.2f))
+    }
+}
 
 @Composable
 fun H1(text: String, modifier: Modifier = Modifier) =
@@ -204,7 +198,7 @@ fun androidx.compose.foundation.lazy.LazyListScope.searchResults(vm: AppViewMode
                 }
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Beaten ${results.size}×:", color = Muted, fontSize = 13.sp)
+                    Text("Beaten ${results.size}×:", color = Muted, fontSize = 14.sp)
                     results.take(8).forEach { g ->
                         GameRow(g) { nav.navigate("detail/${g.id}") }
                     }
@@ -227,11 +221,11 @@ fun MiniPlayingCard(modifier: Modifier, p: Playing, vm: AppViewModel, nav: NavHo
                 Icon(Icons.Filled.Close, "remove", tint = Muted, modifier = Modifier.size(13.dp))
             }
         }
-        Text(p.name, color = Cream, fontWeight = FontWeight.SemiBold, fontSize = 13.sp,
+        Text(p.name, color = Cream, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
             maxLines = 2, modifier = Modifier.fillMaxWidth())
-        Text(p.platform, color = Muted, fontSize = 11.sp, maxLines = 1, modifier = Modifier.fillMaxWidth())
+        Text(p.platform, color = Muted, fontSize = 13.sp, maxLines = 1, modifier = Modifier.fillMaxWidth())
         TextButton(onClick = { nav.navigate("add?playing=" + p.id) }) {
-            Text("Beaten!", color = Good, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            Text("Beaten!", color = Good, fontWeight = FontWeight.Bold, fontSize = 14.sp)
         }
     }
 }
@@ -245,10 +239,10 @@ fun StatCard(modifier: Modifier, big: String, small: String,
     ) {
         emoji?.let { Text(it, fontSize = 24.sp, modifier = Modifier.padding(end = 8.dp)) }
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(big, color = LogoBlueLight, fontSize = 24.sp, fontWeight = FontWeight.Black)
-            Text(small, color = Muted, fontSize = 12.sp)
+            Text(big, color = Cream, fontSize = 30.sp, fontWeight = FontWeight.Black)
+            Text(small, color = Muted, fontSize = 13.sp)
             sub?.let { (line, behind) ->
-                Text(line, color = if (behind) Warn else Good, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                Text(line, color = if (behind) Warn else Good, fontSize = 13.sp, fontWeight = FontWeight.Medium)
             }
         }
     }
