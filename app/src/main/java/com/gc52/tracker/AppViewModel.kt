@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.gc52.tracker.data.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.temporal.WeekFields
@@ -231,6 +232,83 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val d = kotlinx.coroutines.withContext(Dispatchers.IO) { Igdb.details(getApplication(), name) }
         detailsCache[name] = d
         return d
+    }
+
+    // ---- backup / export / restore ----
+    val exportStatus = MutableStateFlow<String?>(null)
+    private fun stamp() = java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")
+        .format(java.time.LocalDateTime.now())
+
+    fun backupNow() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val json = Backup.buildJson(dao.allOnce(), playing.value, backlog.value, series.value)
+            val name = "52gc-backup-${stamp()}.json"
+            exportStatus.value = if (Storage.writeExport(getApplication(), name, "application/json", json))
+                "Backup saved: $name" else "Backup failed — is the data folder set?"
+        }
+    }
+
+    fun exportSpreadsheet() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val bytes = Backup.buildSpreadsheet(dao.allOnce(), playing.value, backlog.value)
+            val name = "52GameChallenge-${stamp()}.xlsx"
+            exportStatus.value = if (Storage.writeExportBytes(getApplication(), name,
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", bytes))
+                "Spreadsheet saved: $name" else "Export failed — is the data folder set?"
+        }
+    }
+
+    data class RestorePreview(val parsed: Backup.Parsed, val text: String)
+    val restorePreview = MutableStateFlow<RestorePreview?>(null)
+    fun loadRestorePreview(uri: Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val text = try {
+                getApplication<android.app.Application>().contentResolver
+                    .openInputStream(uri)?.bufferedReader()?.readText()
+            } catch (e: Exception) { null }
+            val parsed = text?.let { Backup.parseJson(it) }
+            if (parsed == null) exportStatus.value = "That file isn't a 52GC backup."
+            else restorePreview.value = RestorePreview(parsed,
+                "${parsed.games.size} beaten · ${parsed.playing.size} now playing · " +
+                "${parsed.backlog.size} backlog" +
+                (parsed.exportedAt?.let { "
+Exported ${it.take(16).replace('T', ' ')}" } ?: ""))
+        }
+    }
+    fun confirmRestore() {
+        val p = restorePreview.value ?: return
+        restorePreview.value = null
+        viewModelScope.launch(Dispatchers.IO) {
+            autoBackupEnabled = false
+            dao.clearGames(); dao.clearPlaying(); dao.clearBacklog()
+            dao.insertGames(p.parsed.games)
+            dao.insertPlayingAll(p.parsed.playing)
+            dao.insertBacklogAll(p.parsed.backlog)
+            if (p.parsed.series.isNotEmpty()) {
+                prefs.edit().putStringSet("series", p.parsed.series.toSet()).apply()
+                series.value = p.parsed.series.sorted()
+            }
+            exportStatus.value = "Restored ${p.parsed.games.size} beaten games."
+            kotlinx.coroutines.delay(3000)
+            autoBackupEnabled = true
+        }
+    }
+    fun cancelRestore() { restorePreview.value = null }
+
+    // Auto-backup: any data change -> one debounced backup; keep the newest 5.
+    private var autoBackupEnabled = true
+    init {
+        viewModelScope.launch(Dispatchers.IO) {
+            combine(dao.newestFirst(), dao.playing(), dao.backlog()) { g, p, b ->
+                Triple(g.size to g.hashCode(), p.hashCode(), b.hashCode())
+            }.drop(1).debounce(8000).collectLatest {
+                if (!autoBackupEnabled || !Storage.hasFolder(getApplication())) return@collectLatest
+                val json = Backup.buildJson(dao.allOnce(), playing.value, backlog.value, series.value)
+                Storage.writeExport(getApplication(), "52gc-auto-backup-${stamp()}.json",
+                    "application/json", json)
+                Storage.pruneExports(getApplication(), "52gc-auto-backup-", 5)
+            }
+        }
     }
 
     // ---- IGDB enrichment ----

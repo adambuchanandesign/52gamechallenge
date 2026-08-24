@@ -109,6 +109,31 @@ object Storage {
         } catch (e: Exception) { false }
     }
 
+    fun hasFolder(ctx: Context): Boolean = Prefs.treeUri(ctx) != null
+
+    /** Writes a binary file into <folder>/exports/. */
+    fun writeExportBytes(ctx: Context, fileName: String, mime: String, content: ByteArray): Boolean {
+        return try {
+            val exp = dir(ctx, "exports") ?: return false
+            exp.findFile(fileName)?.delete()
+            val dest = exp.createFile(mime, fileName) ?: return false
+            ctx.contentResolver.openOutputStream(dest.uri)?.use { it.write(content) } ?: return false
+            true
+        } catch (e: Exception) { false }
+    }
+
+    /** Keeps only the newest [keep] files in exports/ whose name starts with [prefix]. */
+    fun pruneExports(ctx: Context, prefix: String, keep: Int) {
+        try {
+            val exp = dir(ctx, "exports") ?: return
+            exp.listFiles()
+                .filter { it.name?.startsWith(prefix) == true }
+                .sortedByDescending { it.name }
+                .drop(keep)
+                .forEach { it.delete() }
+        } catch (e: Exception) { }
+    }
+
     /** Moves <folder>/<year>/<fileName> into <folder>/archive/ (copy + delete). */
     fun archiveImage(ctx: Context, year: Int, fileName: String): Boolean {
         return try {

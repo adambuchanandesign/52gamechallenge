@@ -206,6 +206,42 @@ fun SettingsScreen(vm: AppViewModel, nav: NavHostController) {
         }
 
         Column(Modifier.fillMaxWidth().gradientCard().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Backup & export", color = LogoBlueLight, fontWeight = FontWeight.Bold)
+            Text("Everything lands in exports/ inside your data folder (so Syncthing carries it off-device). Auto-backup writes a JSON snapshot shortly after any change and keeps the newest 5.",
+                color = Muted, fontSize = 13.sp)
+            val status by vm.exportStatus.collectAsState()
+            val restorePicker = rememberLauncherForActivityResult(
+                ActivityResultContracts.OpenDocument()
+            ) { uri -> uri?.let { vm.loadRestorePreview(it) } }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = { vm.backupNow() },
+                    colors = ButtonDefaults.buttonColors(containerColor = LogoBlue)) { Text("Backup now") }
+                Button(onClick = { vm.exportSpreadsheet() },
+                    colors = ButtonDefaults.buttonColors(containerColor = LogoBlue)) { Text("Spreadsheet") }
+            }
+            OutlinedButton(onClick = { restorePicker.launch(arrayOf("application/json")) }) {
+                Text("Restore from backup…")
+            }
+            status?.let { Text(it, color = if (it.contains("failed") || it.contains("isn't")) Warn else Good, fontSize = 14.sp) }
+
+            val preview by vm.restorePreview.collectAsState()
+            preview?.let { pv ->
+                AlertDialog(
+                    onDismissRequest = { vm.cancelRestore() },
+                    title = { Text("Replace all data?") },
+                    text = { Text("This backup contains:
+${pv.text}
+
+Current data will be replaced.") },
+                    confirmButton = {
+                        TextButton(onClick = { vm.confirmRestore() }) { Text("Restore", color = Warn) }
+                    },
+                    dismissButton = { TextButton(onClick = { vm.cancelRestore() }) { Text("Cancel") } }
+                )
+            }
+        }
+
+        Column(Modifier.fillMaxWidth().gradientCard().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("IGDB enrichment", color = LogoBlueLight, fontWeight = FontWeight.Bold)
             Text("Fetches genres, release year, rating, cover and summary for every beaten game (one pass, a few minutes). Unlocks genre and release-decade stats. New games enrich automatically when added.",
                 color = Muted, fontSize = 13.sp)

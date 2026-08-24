@@ -24,7 +24,7 @@ Built by GitHub Actions — no local Android tooling needed.
    no rebuild needed. 44 icons ship built-in; anything else gets an
    initials tile.
 
-## What the app does (v0.13)
+## What the app does (v0.14)
 
 - Top nav bar everywhere: ☰ full-screen menu (Homepage / Completed /
   Now Playing / Stats / Settings), centred logo, + straight to Add.
@@ -51,6 +51,12 @@ Built by GitHub Actions — no local Android tooling needed.
   rating, cover and summary for every beaten game; unlocks the genre
   and release-decade charts plus extra fun facts. New games enrich
   automatically on add.
+- Backup & export (Settings): one-tap JSON backup of everything
+  (beaten + enrichment, Now Playing, Backlog, series), old-school
+  .xlsx spreadsheet export (List/Summary/Now Playing/Backlog sheets),
+  and Restore from backup with a confirm preview. Auto-backup writes
+  a snapshot after any data change and keeps the newest 5 — Syncthing
+  carries them off-device.
 - Settings: data folder picker (SAF), CSV import, timestamped CSV
   export to `exports/`, IGDB credentials (masked).
 
