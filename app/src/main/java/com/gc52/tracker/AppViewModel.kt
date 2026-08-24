@@ -235,7 +235,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     // ---- backup / export / restore ----
-    val exportStatus = MutableStateFlow<String?>(null)
     private fun stamp() = java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")
         .format(java.time.LocalDateTime.now())
 

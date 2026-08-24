@@ -97,7 +97,6 @@ interface GameDao {
     @Update suspend fun update(g: Game)
     @Query("SELECT * FROM games WHERE igdbGenres IS NULL ORDER BY year, seq")
     suspend fun unenriched(): List<Game>
-    @Query("DELETE FROM games") suspend fun clearGames()
     @Query("DELETE FROM playing") suspend fun clearPlaying()
     @Query("DELETE FROM backlog") suspend fun clearBacklog()
     @Insert suspend fun insertGames(gs: List<Game>)
