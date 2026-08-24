@@ -83,6 +83,8 @@ fun PlayingDetailScreen(vm: AppViewModel, nav: NavHostController, id: Long) {
             }
         }
 
+        com.gc52.tracker.BigLinkButtons(p.name)
+
         Button(
             onClick = { nav.navigate("add?playing=" + p.id) },
             colors = ButtonDefaults.buttonColors(containerColor = LogoBlue),

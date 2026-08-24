@@ -116,6 +116,30 @@ fun DetailScreen(vm: AppViewModel, nav: NavHostController, id: Long) {
             Spacer(Modifier.height(14.dp))
             EditForm(g) { updated -> vm.update(updated) { }; game = updated; editing = false }
         }
+
+        // IGDB info block
+        var igdbInfo by remember(g.id) { mutableStateOf<com.gc52.tracker.data.Igdb.Details?>(null) }
+        LaunchedEffect(g.id) { igdbInfo = vm.igdbDetails(g.name) }
+        igdbInfo?.let { d ->
+            Spacer(Modifier.height(12.dp))
+            Column(Modifier.fillMaxWidth().gradientCard().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("About (IGDB)", color = LogoBlueLight, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Row {
+                    d.coverBig?.let {
+                        coil.compose.AsyncImage(model = it, contentDescription = d.name,
+                            modifier = Modifier.width(90.dp).clip(RoundedCornerShape(8.dp)))
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(d.name + (d.year?.let { " ($it)" } ?: ""), color = Cream,
+                            fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                        if (d.genres.isNotEmpty()) Text(d.genres.joinToString(" · "), color = Muted, fontSize = 13.sp)
+                        com.gc52.tracker.SmallLinkRow(g.name)
+                    }
+                }
+                d.summary?.let { Text(it, color = Cream, fontSize = 14.sp) }
+            }
+        }
         Spacer(Modifier.height(24.dp))
     }
 

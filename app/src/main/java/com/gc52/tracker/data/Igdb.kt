@@ -94,6 +94,92 @@ object Igdb {
         } catch (e: Exception) { null }
     }
 
+    data class Details(
+        val name: String, val year: Int?, val coverBig: String?,
+        val summary: String?, val genres: List<String>, val platforms: List<String>,
+        val screenshots: List<String>
+    )
+
+    val GENRES = linkedMapOf(
+        "Platformer" to 8, "Shooter" to 5, "RPG" to 12, "Racing" to 10, "Fighting" to 4,
+        "Puzzle" to 9, "Adventure" to 31, "Strategy" to 15, "Sport" to 14, "Arcade" to 33,
+        "Point & click" to 2, "Hack and slash" to 25, "Indie" to 32
+    )
+    val ERAS = linkedMapOf(
+        "1980s" to (1980 to 1989), "1990s" to (1990 to 1999), "2000s" to (2000 to 2009),
+        "2010s" to (2010 to 2019), "2020s" to (2020 to 2029)
+    )
+
+    private fun query(ctx: Context, body: String): JSONArray? {
+        val tok = token(ctx) ?: return null
+        return try {
+            val url = URL("https://api.igdb.com/v4/games")
+            val conn = (url.openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"; connectTimeout = 8000; readTimeout = 8000; doOutput = true
+                setRequestProperty("Client-ID", clientId(ctx))
+                setRequestProperty("Authorization", "Bearer $tok")
+                setRequestProperty("Accept", "application/json")
+            }
+            conn.outputStream.use { it.write(body.toByteArray()) }
+            if (conn.responseCode != 200) null
+            else JSONArray(conn.inputStream.bufferedReader().readText())
+        } catch (e: Exception) { null }
+    }
+
+    private fun parseDetails(o: JSONObject): Details {
+        val year = if (o.has("first_release_date"))
+            Instant.ofEpochSecond(o.getLong("first_release_date")).atZone(ZoneOffset.UTC).year else null
+        fun names(key: String): List<String> =
+            if (o.has(key)) {
+                val a = o.getJSONArray(key)
+                (0 until a.length()).mapNotNull { a.getJSONObject(it).optString("name").ifBlank { null } }
+            } else emptyList()
+        val cover = if (o.has("cover"))
+            o.getJSONObject("cover").optString("image_id").ifBlank { null }
+                ?.let { "https://images.igdb.com/igdb/image/upload/t_cover_big/$it.jpg" } else null
+        val shots = if (o.has("screenshots")) {
+            val a = o.getJSONArray("screenshots")
+            (0 until minOf(a.length(), 3)).mapNotNull {
+                a.getJSONObject(it).optString("image_id").ifBlank { null }
+                    ?.let { id -> "https://images.igdb.com/igdb/image/upload/t_screenshot_med/$id.jpg" }
+            }
+        } else emptyList()
+        return Details(
+            o.optString("name"), year, cover,
+            o.optString("summary").ifBlank { null }, names("genres"), names("platforms"), shots
+        )
+    }
+
+    private const val DETAIL_FIELDS =
+        "fields name, first_release_date, summary, genres.name, platforms.name, cover.image_id, screenshots.image_id;"
+
+    /** Best single match for a game name, with summary/genres/screenshots. */
+    fun details(ctx: Context, name: String): Details? {
+        val q = name.replace("\"", "")
+        val arr = query(ctx, "search \"$q\"; $DETAIL_FIELDS limit 1;") ?: return null
+        if (arr.length() == 0) return null
+        return parseDetails(arr.getJSONObject(0))
+    }
+
+    /** Random reasonably-known game, optionally filtered by genre id and/or release decade. */
+    fun randomPick(ctx: Context, genreId: Int?, era: Pair<Int, Int>?): Details? {
+        val where = buildList {
+            add("rating_count > 5"); add("cover != null")
+            genreId?.let { add("genres = ($it)") }
+            era?.let { (a, b) ->
+                val from = java.time.LocalDate.of(a, 1, 1).toEpochDay() * 86400
+                val to = java.time.LocalDate.of(b, 12, 31).toEpochDay() * 86400
+                add("first_release_date > $from & first_release_date < $to")
+            }
+        }.joinToString(" & ")
+        val offset = (0..300).random()
+        var arr = query(ctx, "$DETAIL_FIELDS where $where; sort rating_count desc; limit 40; offset $offset;")
+        if (arr == null || arr.length() == 0)
+            arr = query(ctx, "$DETAIL_FIELDS where $where; sort rating_count desc; limit 40;") ?: return null
+        if (arr.length() == 0) return null
+        return parseDetails(arr.getJSONObject((0 until arr.length()).random()))
+    }
+
     fun testConnection(ctx: Context): String {
         if (!enabled(ctx)) return "Enter both Client ID and Secret first"
         prefs(ctx).edit().remove("igdb_token").remove("igdb_token_exp").apply()

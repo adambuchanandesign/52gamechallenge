@@ -25,7 +25,7 @@ import com.gc52.tracker.ui.theme.*
 import com.gc52.tracker.AppViewModel.IgdbUi
 
 @Composable
-fun DisambigScreen(vm: AppViewModel, nav: NavHostController) {
+fun DisambigScreen(vm: AppViewModel, nav: NavHostController, mode: String = "playing") {
     val queryState by vm.query.collectAsState()
     val query = queryState.trim()
     val igdb by vm.igdbUi.collectAsState()
@@ -33,7 +33,7 @@ fun DisambigScreen(vm: AppViewModel, nav: NavHostController) {
     var similar by remember { mutableStateOf<List<Game>>(emptyList()) }
     LaunchedEffect(query) { similar = if (query.length >= 2) vm.duplicatesOf(query) else emptyList() }
     fun pick(name: String, platforms: List<String>, cover: String?) {
-        vm.pendingNp = AppViewModel.PendingNp(name, platforms, cover)
+        vm.pendingNp = AppViewModel.PendingNp(name, platforms, cover, target = mode)
         nav.navigate("npadd")
     }
 
@@ -43,7 +43,7 @@ fun DisambigScreen(vm: AppViewModel, nav: NavHostController) {
                 IconButton(onClick = { nav.popBackStack() }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Muted)
                 }
-                H1("Add to Now playing")
+                H1(if (mode == "backlog") "Add to Backlog" else "Add to Now playing")
             }
         }
         item { BeatenSearch(vm) }
@@ -74,7 +74,7 @@ fun DisambigScreen(vm: AppViewModel, nav: NavHostController) {
                     }
                     Text(if (manualOpen) "▲" else "▼", color = Muted, fontSize = 14.sp)
                 }
-                if (manualOpen) ManualNpForm(vm, nav, prefill = query)
+                if (manualOpen) ManualNpForm(vm, nav, prefill = query, target = mode)
             }
         }
 
@@ -105,6 +105,7 @@ fun DisambigScreen(vm: AppViewModel, nav: NavHostController) {
                         Text(h.platforms.joinToString(" · ") { Igdb.mapPlatform(it) },
                             color = Muted, fontSize = 12.sp, maxLines = 2)
                     }
+                    com.gc52.tracker.SmallLinkRow(h.name)
                 }
             }
         }
@@ -122,7 +123,7 @@ fun DisambigScreen(vm: AppViewModel, nav: NavHostController) {
 }
 
 @Composable
-fun ManualNpForm(vm: AppViewModel, nav: NavHostController, prefill: String) {
+fun ManualNpForm(vm: AppViewModel, nav: NavHostController, prefill: String, target: String = "playing") {
     var name by remember(prefill) { mutableStateOf(prefill) }
     var platform by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
@@ -149,9 +150,12 @@ fun ManualNpForm(vm: AppViewModel, nav: NavHostController, prefill: String) {
         Button(
             enabled = name.isNotBlank() && platform.isNotBlank(),
             onClick = {
-                vm.addPlaying(name, platform, notes)
+                if (target == "backlog") vm.addBacklog(name, platform, notes)
+                else vm.addPlaying(name, platform, notes)
                 vm.query.value = ""
-                nav.navigate("playing") { popUpTo("home"); launchSingleTop = true }
+                nav.navigate(if (target == "backlog") "backlog" else "playing") {
+                    popUpTo("home"); launchSingleTop = true
+                }
             },
             colors = ButtonDefaults.buttonColors(containerColor = LogoBlue)
         ) { Text("Start playing", fontWeight = FontWeight.Bold) }

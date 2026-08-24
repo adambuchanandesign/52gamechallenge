@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Casino
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.automirrored.filled.List
@@ -34,6 +35,8 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
     val platformCounts by vm.platformCounts.collectAsState()
     val yearCounts by vm.yearCounts.collectAsState()
     val playing by vm.playing.collectAsState()
+    val backlogList by vm.backlog.collectAsState()
+    val onThisWeek by vm.onThisWeek.collectAsState()
     var showAddPlaying by remember { mutableStateOf(false) }
 
     fun openGames(year: Int? = null, platform: String? = null) {
@@ -67,6 +70,9 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
                 NavButton(Modifier.weight(1f), "Add beaten", Icons.Filled.Add) { nav.navigate("add") }
                 NavButton(Modifier.weight(1f), "Browse games", Icons.AutoMirrored.Filled.List) { nav.navigate("games") }
             }
+        }
+        item {
+            NavButton(Modifier.fillMaxWidth(), "Random picker 🎲", Icons.Filled.Casino) { nav.navigate("random") }
         }
 
         item { Spacer(Modifier.height(6.dp)) }
@@ -104,9 +110,47 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
             }
         }
 
-        // ---- Browse by year ----
+        // ---- Backlog ----
         item { SectionBreak() }
-        item { H1("Browse by year") }
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                H1("Backlog", Modifier.weight(1f))
+                TextButton(onClick = { nav.navigate("disambig?mode=backlog") }) { Text("+ Add", color = LogoBlueLight) }
+            }
+        }
+        if (backlogList.isEmpty()) {
+            item { Text("Nothing queued up — the Random picker can fix that.", color = Muted, fontSize = 12.sp) }
+        } else {
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    MiniCard(Modifier.weight(1f), backlogList[0].name, backlogList[0].platform, backlogList[0].coverUrl) {
+                        nav.navigate("backlogdetail/" + backlogList[0].id)
+                    }
+                    if (backlogList.size > 1) MiniCard(Modifier.weight(1f), backlogList[1].name, backlogList[1].platform, backlogList[1].coverUrl) {
+                        nav.navigate("backlogdetail/" + backlogList[1].id)
+                    } else Spacer(Modifier.weight(1f))
+                }
+            }
+            item {
+                NavButton(Modifier.fillMaxWidth(), "View all backlog (${backlogList.size})",
+                    Icons.AutoMirrored.Filled.List) { nav.navigate("backlog") }
+            }
+        }
+
+        // ---- History ----
+        item { SectionBreak() }
+        item { H1("History") }
+        if (onThisWeek.isNotEmpty()) {
+            item { H2("On this week") }
+            items(onThisWeek.take(6).chunked(2), key = { "w" + it.first().id }) { pair ->
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Box(Modifier.weight(1f)) { GameGridCell(pair[0]) { nav.navigate("detail/${pair[0].id}") } }
+                    if (pair.size > 1) Box(Modifier.weight(1f)) { GameGridCell(pair[1]) { nav.navigate("detail/${pair[1].id}") } }
+                    else Spacer(Modifier.weight(1f))
+                }
+            }
+        }
+        item { H2("Browse by year") }
         items(yearCounts.sortedByDescending { it.year }.chunked(2)) { pair ->
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 pair.forEach { yc ->

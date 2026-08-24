@@ -25,6 +25,16 @@ data class Idea(
     val done: Boolean = false
 )
 
+@Entity(tableName = "backlog")
+data class Backlog(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val platform: String,
+    val added: String?,
+    val notes: String?,
+    val coverUrl: String? = null
+)
+
 @Entity(tableName = "playing")
 data class Playing(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -98,9 +108,18 @@ interface GameDao {
     @Update suspend fun updatePlaying(p: Playing)
     @Delete suspend fun deletePlaying(p: Playing)
     @Query("DELETE FROM playing WHERE id = :id") suspend fun deletePlayingById(id: Long)
+
+    @Query("SELECT * FROM backlog ORDER BY id DESC")
+    fun backlog(): Flow<List<Backlog>>
+    @Query("SELECT * FROM backlog WHERE id = :id")
+    suspend fun backlogById(id: Long): Backlog?
+    @Insert suspend fun insertBacklog(b: Backlog): Long
+    @Update suspend fun updateBacklog(b: Backlog)
+    @Delete suspend fun deleteBacklog(b: Backlog)
+    @Query("DELETE FROM backlog WHERE id = :id") suspend fun deleteBacklogById(id: Long)
 }
 
-@Database(entities = [Game::class, Idea::class, Playing::class], version = 3, exportSchema = false)
+@Database(entities = [Game::class, Idea::class, Playing::class, Backlog::class], version = 4, exportSchema = false)
 abstract class AppDb : RoomDatabase() {
     abstract fun dao(): GameDao
 
@@ -108,7 +127,7 @@ abstract class AppDb : RoomDatabase() {
         @Volatile private var inst: AppDb? = null
         fun get(ctx: Context): AppDb = inst ?: synchronized(this) {
             inst ?: Room.databaseBuilder(ctx.applicationContext, AppDb::class.java, "gc52.db")
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .build().also { inst = it }
         }
     }
@@ -123,6 +142,12 @@ val MIGRATION_1_2 = object : androidx.room.migration.Migration(1, 2) {
 val MIGRATION_2_3 = object : androidx.room.migration.Migration(2, 3) {
     override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE `playing` ADD COLUMN `coverUrl` TEXT")
+    }
+}
+
+val MIGRATION_3_4 = object : androidx.room.migration.Migration(3, 4) {
+    override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS `backlog` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `platform` TEXT NOT NULL, `added` TEXT, `notes` TEXT, `coverUrl` TEXT)")
     }
 }
 

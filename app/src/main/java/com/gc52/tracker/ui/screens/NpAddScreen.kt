@@ -49,7 +49,7 @@ fun NpAddScreen(vm: AppViewModel, nav: NavHostController) {
             IconButton(onClick = { nav.popBackStack() }) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Muted)
             }
-            H1("Add to Now playing")
+            H1(if (pending?.target == "backlog") "Add to Backlog" else "Add to Now playing")
         }
 
         pending?.coverUrl?.let { cover ->
@@ -109,16 +109,18 @@ fun NpAddScreen(vm: AppViewModel, nav: NavHostController) {
         Button(
             enabled = name.isNotBlank() && platform.isNotBlank(),
             onClick = {
-                vm.addPlaying(name, platform, notes, pending?.coverUrl)
+                if (pending?.target == "backlog") vm.addBacklog(name, platform, notes, pending.coverUrl)
+                else vm.addPlaying(name, platform, notes, pending?.coverUrl)
+                val dest = if (pending?.target == "backlog") "backlog" else "playing"
                 vm.pendingNp = null
                 vm.query.value = ""
-                nav.navigate("playing") {
+                nav.navigate(dest) {
                     popUpTo("home"); launchSingleTop = true
                 }
             },
             colors = ButtonDefaults.buttonColors(containerColor = LogoBlue),
             modifier = Modifier.fillMaxWidth()
-        ) { Text("Start playing", fontWeight = FontWeight.Bold) }
+        ) { Text(if (pending?.target == "backlog") "Add to backlog" else "Start playing", fontWeight = FontWeight.Bold) }
         Spacer(Modifier.height(20.dp))
     }
 }

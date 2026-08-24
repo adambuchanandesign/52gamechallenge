@@ -116,8 +116,18 @@ fun AppNav(nav: NavHostController) {
                 }
                 composable("stats") { StatsScreen(vm, nav) }
                 composable("playing") { PlayingScreen(vm, nav) }
-                composable("disambig") { DisambigScreen(vm, nav) }
+                composable("disambig?mode={mode}",
+                    arguments = listOf(androidx.navigation.navArgument("mode") { defaultValue = "playing" })
+                ) { back ->
+                    DisambigScreen(vm, nav, back.arguments?.getString("mode") ?: "playing")
+                }
                 composable("npadd") { NpAddScreen(vm, nav) }
+                composable("backlog") { BacklogScreen(vm, nav) }
+                composable("backlogdetail/{id}") { back ->
+                    val id = back.arguments?.getString("id")?.toLongOrNull() ?: return@composable
+                    BacklogDetailScreen(vm, nav, id)
+                }
+                composable("random") { RandomScreen(vm, nav) }
                 composable("playingdetail/{id}") { back ->
                     val id = back.arguments?.getString("id")?.toLongOrNull() ?: return@composable
                     PlayingDetailScreen(vm, nav, id)
@@ -162,7 +172,9 @@ fun FullScreenMenu(nav: NavHostController, onClose: () -> Unit) {
             listOf(
                 "Completed" to "games",
                 "Now Playing" to "playing",
+                "Backlog" to "backlog",
                 "Add Game" to "add",
+                "Random" to "random",
                 "Stats" to "stats",
                 "Settings" to "settings"
             ).forEach { (label, route) ->
@@ -359,5 +371,74 @@ fun GameGridCell(g: Game, onClick: () -> Unit) {
         Text(g.platform, color = Muted, fontSize = 13.sp, maxLines = 1)
         Text("${g.seq}/52", color = Cream, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         g.date?.let { Text(it.take(10), color = Muted, fontSize = 12.sp) }
+    }
+}
+
+/* ---------- external link helpers ---------- */
+
+fun launchUrl(ctx: android.content.Context, url: String) {
+    try {
+        ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(url)))
+    } catch (e: Exception) { }
+}
+
+fun hltbUrl(name: String) = "https://howlongtobeat.com/?q=" + java.net.URLEncoder.encode(name, "UTF-8")
+fun longplayUrl(name: String) =
+    "https://www.youtube.com/results?search_query=" + java.net.URLEncoder.encode("$name longplay", "UTF-8")
+
+/** Two large blue browser-out buttons. */
+@Composable
+fun BigLinkButtons(name: String) {
+    val ctx = LocalContext.current
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+        Row(
+            Modifier.weight(1f).gradientButton().clickable { launchUrl(ctx, hltbUrl(name)) }
+                .padding(vertical = 13.dp),
+            horizontalArrangement = Arrangement.Center
+        ) { Text("HowLongToBeat", color = androidx.compose.ui.graphics.Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp) }
+        Row(
+            Modifier.weight(1f).gradientButton().clickable { launchUrl(ctx, longplayUrl(name)) }
+                .padding(vertical = 13.dp),
+            horizontalArrangement = Arrangement.Center
+        ) { Text("Longplays", color = androidx.compose.ui.graphics.Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp) }
+    }
+}
+
+/** Small green inline text links. */
+@Composable
+fun SmallLinkRow(name: String) {
+    val ctx = LocalContext.current
+    Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        Text("HowLongToBeat", color = Good, fontSize = 12.sp, fontWeight = FontWeight.Medium,
+            modifier = Modifier.clickable { launchUrl(ctx, hltbUrl(name)) })
+        Text("Longplays", color = Good, fontSize = 12.sp, fontWeight = FontWeight.Medium,
+            modifier = Modifier.clickable { launchUrl(ctx, longplayUrl(name)) })
+    }
+}
+
+/** Generic cover mini card used for Now playing + Backlog 50/50 grids. */
+@Composable
+fun MiniCard(modifier: Modifier, name: String, platform: String, coverUrl: String?, onClick: () -> Unit) {
+    Column(
+        modifier.gradientCard().clickable(onClick = onClick).padding(10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            Modifier.fillMaxWidth().aspectRatio(0.75f)
+                .clip(RoundedCornerShape(10.dp)).background(Surface2),
+            contentAlignment = Alignment.Center
+        ) {
+            if (coverUrl != null) {
+                AsyncImage(
+                    model = coverUrl.replace("t_cover_small", "t_cover_big"),
+                    contentDescription = name,
+                    contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()
+                )
+            } else PlatformIcon(platform, 48)
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(name, color = Cream, fontWeight = FontWeight.SemiBold, fontSize = 15.sp,
+            maxLines = 2, modifier = Modifier.fillMaxWidth())
+        Text(platform, color = Muted, fontSize = 14.sp, maxLines = 1, modifier = Modifier.fillMaxWidth())
     }
 }

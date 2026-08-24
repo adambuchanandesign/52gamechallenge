@@ -164,7 +164,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     // ---- now playing ----
     val playing = dao.playing().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    data class PendingNp(val name: String, val platforms: List<String>, val coverUrl: String?)
+    data class PendingNp(val name: String, val platforms: List<String>, val coverUrl: String?,
+                         val target: String = "playing")  // "playing" | "backlog"
     var pendingNp: PendingNp? = null
 
     fun addPlaying(name: String, platform: String, notes: String?, coverUrl: String? = null) {
@@ -175,6 +176,67 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
     fun updatePlaying(p: Playing) { viewModelScope.launch(Dispatchers.IO) { dao.updatePlaying(p) } }
+
+    // ---- backlog ----
+    val backlog = dao.backlog().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    fun addBacklog(name: String, platform: String, notes: String?, coverUrl: String? = null) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.insertBacklog(Backlog(name = name.trim(), platform = platform.trim(),
+                added = java.time.LocalDate.now().toString(), notes = notes?.ifBlank { null },
+                coverUrl = coverUrl))
+        }
+    }
+    fun updateBacklog(b: Backlog) { viewModelScope.launch(Dispatchers.IO) { dao.updateBacklog(b) } }
+    fun removeBacklog(b: Backlog) { viewModelScope.launch(Dispatchers.IO) { dao.deleteBacklog(b) } }
+    suspend fun backlogItem(id: Long): Backlog? = dao.backlogById(id)
+    fun consumeBacklog(id: Long) { viewModelScope.launch(Dispatchers.IO) { dao.deleteBacklogById(id) } }
+    /** Promote a backlog entry into Now playing. */
+    fun startPlayingFromBacklog(b: Backlog) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.insertPlaying(Playing(name = b.name, platform = b.platform,
+                started = java.time.LocalDate.now().toString(), notes = b.notes, coverUrl = b.coverUrl))
+            dao.deleteBacklog(b)
+        }
+    }
+
+    // ---- history: on this week / month in past years ----
+    private fun weekOf(d: java.time.LocalDate) =
+        d.get(java.time.temporal.WeekFields.of(java.util.Locale.UK).weekOfWeekBasedYear())
+    val onThisWeek: StateFlow<List<Game>> = dao.newestFirst().map { all ->
+        val now = java.time.LocalDate.now()
+        val w = weekOf(now)
+        all.filter { g ->
+            g.year != now.year && g.date != null &&
+                runCatching { java.time.LocalDate.parse(g.date.take(10)) }.getOrNull()
+                    ?.let { weekOf(it) == w } == true
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val onThisMonth: StateFlow<List<Game>> = dao.newestFirst().map { all ->
+        val now = java.time.LocalDate.now()
+        all.filter { g ->
+            g.year != now.year && g.date != null &&
+                g.date.take(7).endsWith("-%02d".format(now.monthValue))
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    // ---- IGDB details cache (game detail page block) ----
+    private val detailsCache = HashMap<String, Igdb.Details?>()
+    suspend fun igdbDetails(name: String): Igdb.Details? {
+        if (!igdbEnabled.value) return null
+        detailsCache[name]?.let { return it }
+        if (detailsCache.containsKey(name)) return null
+        val d = kotlinx.coroutines.withContext(Dispatchers.IO) { Igdb.details(getApplication(), name) }
+        detailsCache[name] = d
+        return d
+    }
+
+    // ---- random picker ----
+    suspend fun randomGame(genreId: Int?, era: Pair<Int, Int>?): Igdb.Details? =
+        kotlinx.coroutines.withContext(Dispatchers.IO) { Igdb.randomPick(getApplication(), genreId, era) }
+    suspend fun beatenMatch(name: String): Game? {
+        val n = normalizeTitle(name)
+        return dao.allOnce().firstOrNull { it.normName == n }
+    }
     fun removePlaying(p: Playing) { viewModelScope.launch(Dispatchers.IO) { dao.deletePlaying(p) } }
     suspend fun playingItem(id: Long): Playing? = dao.playingById(id)
     fun consumePlaying(id: Long) { viewModelScope.launch(Dispatchers.IO) { dao.deletePlayingById(id) } }

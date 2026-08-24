@@ -153,6 +153,35 @@ fun StatsScreen(vm: AppViewModel, nav: NavHostController) {
             }
         }
 
+        // On this week / month
+        item {
+            val week by vm.onThisWeek.collectAsState()
+            val month by vm.onThisMonth.collectAsState()
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (week.isNotEmpty()) {
+                    Text("On this week", color = Cream, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    week.take(8).chunked(2).forEach { pair ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Box(Modifier.weight(1f)) { com.gc52.tracker.GameGridCell(pair[0]) { nav.navigate("detail/${pair[0].id}") } }
+                            if (pair.size > 1) Box(Modifier.weight(1f)) { com.gc52.tracker.GameGridCell(pair[1]) { nav.navigate("detail/${pair[1].id}") } }
+                            else Spacer(Modifier.weight(1f))
+                        }
+                    }
+                }
+                if (month.isNotEmpty()) {
+                    Text("On this month (${month.size})", color = Cream, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    month.take(8).chunked(2).forEach { pair ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Box(Modifier.weight(1f)) { com.gc52.tracker.GameGridCell(pair[0]) { nav.navigate("detail/${pair[0].id}") } }
+                            if (pair.size > 1) Box(Modifier.weight(1f)) { com.gc52.tracker.GameGridCell(pair[1]) { nav.navigate("detail/${pair[1].id}") } }
+                            else Spacer(Modifier.weight(1f))
+                        }
+                    }
+                    if (month.size > 8) Text("…and ${month.size - 8} more", color = Muted, fontSize = 13.sp)
+                }
+            }
+        }
+
         // Fun facts — its own section, one mini block per fact
         item { Text("Fun facts", color = Cream, fontWeight = FontWeight.Bold, fontSize = 18.sp) }
         item {
