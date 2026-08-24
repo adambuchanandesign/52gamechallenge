@@ -49,6 +49,7 @@ import com.gc52.tracker.ui.screens.*
 import com.gc52.tracker.ui.theme.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 
 class MainActivity : ComponentActivity() {
@@ -153,6 +154,11 @@ fun AppNav(nav: NavHostController) {
 @Composable
 fun FullScreenMenu(nav: NavHostController, onClose: () -> Unit) {
     androidx.activity.compose.BackHandler(onBack = onClose)
+    val scope = rememberCoroutineScope()
+    fun go(route: String) {
+        nav.navigate(route) { launchSingleTop = true }
+        scope.launch { kotlinx.coroutines.delay(120); onClose() }
+    }
     Box(
         Modifier.fillMaxSize()
             .background(Bg.copy(alpha = 0.98f))
@@ -165,9 +171,7 @@ fun FullScreenMenu(nav: NavHostController, onClose: () -> Unit) {
         ) {
             Icon(
                 Icons.Filled.Home, "Homepage", tint = Cream,
-                modifier = Modifier.size(38.dp).clickable {
-                    onClose(); nav.navigate("home") { launchSingleTop = true }
-                }
+                modifier = Modifier.size(38.dp).clickable { go("home") }
             )
             listOf(
                 "Completed" to "games",
@@ -180,10 +184,8 @@ fun FullScreenMenu(nav: NavHostController, onClose: () -> Unit) {
             ).forEach { (label, route) ->
                 Text(
                     label, color = Cream, fontSize = 26.sp, fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable {
-                        onClose()
-                        nav.navigate(route) { launchSingleTop = true }
-                    }.padding(horizontal = 24.dp, vertical = 4.dp)
+                    modifier = Modifier.clickable { go(route) }
+                        .padding(horizontal = 24.dp, vertical = 4.dp)
                 )
             }
             Spacer(Modifier.height(6.dp))
@@ -288,7 +290,7 @@ fun GameRow(g: Game, onClick: () -> Unit) {
         PlatformIcon(g.platform)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(g.name, color = Cream, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, maxLines = 1)
+            Text(g.name, color = Cream, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             Text(
                 g.platform + if (g.replay) " · replay" else "",
                 color = Muted, fontSize = 14.sp, maxLines = 1
@@ -337,7 +339,7 @@ fun GameLargeCell(g: Game, onClick: () -> Unit) {
             PlatformIcon(g.platform, 28)
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
-                Text(g.name, color = Cream, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                Text(g.name, color = Cream, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 Text(g.platform, color = Muted, fontSize = 14.sp, maxLines = 1)
             }
             Column(horizontalAlignment = Alignment.End) {
@@ -367,7 +369,7 @@ fun GameGridCell(g: Game, onClick: () -> Unit) {
             } else PlatformIcon(g.platform, 48)
         }
         Spacer(Modifier.height(6.dp))
-        Text(g.name, color = Cream, fontSize = 14.sp, maxLines = 1, fontWeight = FontWeight.Medium)
+        Text(g.name, color = Cream, fontSize = 14.sp, maxLines = 1, fontWeight = FontWeight.Medium, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         Text(g.platform, color = Muted, fontSize = 13.sp, maxLines = 1)
         Text("${g.seq}/52", color = Cream, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         g.date?.let { Text(it.take(10), color = Muted, fontSize = 12.sp) }
@@ -438,7 +440,37 @@ fun MiniCard(modifier: Modifier, name: String, platform: String, coverUrl: Strin
         }
         Spacer(Modifier.height(6.dp))
         Text(name, color = Cream, fontWeight = FontWeight.SemiBold, fontSize = 15.sp,
-            maxLines = 2, modifier = Modifier.fillMaxWidth())
+            maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            modifier = Modifier.fillMaxWidth())
         Text(platform, color = Muted, fontSize = 14.sp, maxLines = 1, modifier = Modifier.fillMaxWidth())
+    }
+}
+
+/** IGDB "About" panel used on beaten / now playing / backlog item pages. */
+@Composable
+fun IgdbAboutBlock(vm: AppViewModel, name: String) {
+    var info by remember(name) { mutableStateOf<com.gc52.tracker.data.Igdb.Details?>(null) }
+    LaunchedEffect(name) { info = vm.igdbDetails(name) }
+    info?.let { d ->
+        Column(
+            Modifier.fillMaxWidth().gradientCard().padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text("About (IGDB)", color = LogoBlueLight, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            Row {
+                d.coverBig?.let {
+                    AsyncImage(model = it, contentDescription = d.name,
+                        modifier = Modifier.width(90.dp).clip(RoundedCornerShape(8.dp)))
+                }
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text(d.name + (d.year?.let { " ($it)" } ?: ""), color = Cream,
+                        fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                    if (d.genres.isNotEmpty()) Text(d.genres.joinToString(" · "), color = Muted, fontSize = 13.sp)
+                    SmallLinkRow(name)
+                }
+            }
+            d.summary?.let { Text(it, color = Cream, fontSize = 14.sp) }
+        }
     }
 }

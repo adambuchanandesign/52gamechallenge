@@ -71,11 +71,14 @@ fun StatsScreen(vm: AppViewModel, nav: NavHostController) {
 
         // Games per year bar chart
         item {
+            var pieYear by remember { mutableStateOf(false) }
             Column(Modifier.fillMaxWidth().gradientCard().padding(14.dp)) {
-                Text("Games per year", color = LogoBlueLight, fontWeight = FontWeight.Bold)
+                ChartHeader("Games per year", pieYear) { pieYear = it }
                 Spacer(Modifier.height(10.dp))
                 val max = (yearCounts.maxOfOrNull { it.n } ?: 1).coerceAtLeast(1)
-                Row(
+                if (pieYear) {
+                    PieChart(yearCounts.map { "'%02d".format(it.year % 100) to it.n })
+                } else Row(
                     Modifier.fillMaxWidth().height(158.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.Bottom
@@ -100,11 +103,13 @@ fun StatsScreen(vm: AppViewModel, nav: NavHostController) {
         item {
             val eras = all.groupingBy { eraMap[it.platform] ?: "Other" }.eachCount()
                 .toList().sortedByDescending { it.second }
+            var pieEra by remember { mutableStateOf(false) }
             Column(Modifier.fillMaxWidth().gradientCard().padding(14.dp)) {
-                Text("Eras you play most", color = LogoBlueLight, fontWeight = FontWeight.Bold)
+                ChartHeader("Eras you play most", pieEra) { pieEra = it }
                 Spacer(Modifier.height(8.dp))
                 val eraMax = (eras.maxOfOrNull { it.second } ?: 1).coerceAtLeast(1)
-                eras.forEach { (era, n) ->
+                if (pieEra) PieChart(eras)
+                else eras.forEach { (era, n) ->
                     Row(Modifier.padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(era, color = Cream, fontSize = 15.sp, modifier = Modifier.width(120.dp))
                         Box(
@@ -153,30 +158,18 @@ fun StatsScreen(vm: AppViewModel, nav: NavHostController) {
             }
         }
 
-        // On this week / month
+        // On this day / month
         item {
-            val week by vm.onThisWeek.collectAsState()
+            val day by vm.onThisDay.collectAsState()
             val month by vm.onThisMonth.collectAsState()
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                if (week.isNotEmpty()) {
-                    Text("On this week", color = Cream, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    week.take(8).chunked(2).forEach { pair ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Box(Modifier.weight(1f)) { com.gc52.tracker.GameGridCell(pair[0]) { nav.navigate("detail/${pair[0].id}") } }
-                            if (pair.size > 1) Box(Modifier.weight(1f)) { com.gc52.tracker.GameGridCell(pair[1]) { nav.navigate("detail/${pair[1].id}") } }
-                            else Spacer(Modifier.weight(1f))
-                        }
-                    }
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (day.isNotEmpty()) {
+                    Text("On this day", color = Cream, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    day.forEach { g -> com.gc52.tracker.GameRow(g) { nav.navigate("detail/${g.id}") } }
                 }
                 if (month.isNotEmpty()) {
                     Text("On this month (${month.size})", color = Cream, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    month.take(8).chunked(2).forEach { pair ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Box(Modifier.weight(1f)) { com.gc52.tracker.GameGridCell(pair[0]) { nav.navigate("detail/${pair[0].id}") } }
-                            if (pair.size > 1) Box(Modifier.weight(1f)) { com.gc52.tracker.GameGridCell(pair[1]) { nav.navigate("detail/${pair[1].id}") } }
-                            else Spacer(Modifier.weight(1f))
-                        }
-                    }
+                    month.take(8).forEach { g -> com.gc52.tracker.GameRow(g) { nav.navigate("detail/${g.id}") } }
                     if (month.size > 8) Text("…and ${month.size - 8} more", color = Muted, fontSize = 13.sp)
                 }
             }
@@ -271,4 +264,45 @@ private fun buildFacts(all: List<Game>, platformCount: Int): List<Pair<String, S
     facts.add("Distinct platforms" to "$platformCount")
     facts.add("Total beaten" to "${all.size}")
     return facts
+}
+
+@Composable
+fun ChartHeader(title: String, pie: Boolean, onChange: (Boolean) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(title, color = LogoBlueLight, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+        Text("Bar", color = if (!pie) LogoBlueLight else Muted, fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.clickable { onChange(false) }.padding(horizontal = 6.dp))
+        Text("Pie", color = if (pie) LogoBlueLight else Muted, fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.clickable { onChange(true) }.padding(horizontal = 6.dp))
+    }
+}
+
+@Composable
+fun PieChart(data: List<Pair<String, Int>>) {
+    val total = data.sumOf { it.second }.coerceAtLeast(1)
+    val colors = data.indices.map { i ->
+        androidx.compose.ui.graphics.Color.hsv((205f + i * 137.5f) % 360f, 0.55f, 0.88f)
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        androidx.compose.foundation.Canvas(Modifier.size(150.dp).padding(4.dp)) {
+            var start = -90f
+            data.forEachIndexed { i, (_, n) ->
+                val sweep = 360f * n / total
+                drawArc(color = colors[i], startAngle = start, sweepAngle = sweep, useCenter = true)
+                start += sweep
+            }
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            data.forEachIndexed { i, (label, n) ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(10.dp).background(colors[i], RoundedCornerShape(2.dp)))
+                    Spacer(Modifier.width(6.dp))
+                    Text("$label — $n", color = Cream, fontSize = 12.sp)
+                }
+            }
+        }
+    }
 }

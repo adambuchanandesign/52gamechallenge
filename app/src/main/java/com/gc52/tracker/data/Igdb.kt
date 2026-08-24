@@ -139,7 +139,7 @@ object Igdb {
                 ?.let { "https://images.igdb.com/igdb/image/upload/t_cover_big/$it.jpg" } else null
         val shots = if (o.has("screenshots")) {
             val a = o.getJSONArray("screenshots")
-            (0 until minOf(a.length(), 3)).mapNotNull {
+            (0 until minOf(a.length(), 6)).mapNotNull {
                 a.getJSONObject(it).optString("image_id").ifBlank { null }
                     ?.let { id -> "https://images.igdb.com/igdb/image/upload/t_screenshot_med/$id.jpg" }
             }

@@ -122,6 +122,7 @@ fun BacklogDetailScreen(vm: AppViewModel, nav: NavHostController, id: Long) {
         OutlinedButton(onClick = { confirmRemove = true }, modifier = Modifier.fillMaxWidth()) {
             Text("Remove from backlog", color = Warn)
         }
+        IgdbAboutBlock(vm, b.name)
         Spacer(Modifier.height(20.dp))
     }
 
@@ -193,15 +194,22 @@ fun RandomScreen(vm: AppViewModel, nav: NavHostController) {
                         containerColor = Surface1, labelColor = Muted))
             }
         }
-        Button(
-            enabled = enabled && !spinning, onClick = { spin() },
-            colors = ButtonDefaults.buttonColors(containerColor = LogoBlue),
-            modifier = Modifier.fillMaxWidth()
-        ) { Text(if (spinning) "Spinning…" else "Spin 🎲", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
+        if (result == null) {
+            Button(
+                enabled = enabled && !spinning, onClick = { spin() },
+                colors = ButtonDefaults.buttonColors(containerColor = LogoBlue),
+                modifier = Modifier.fillMaxWidth()
+            ) { Text(if (spinning) "Spinning…" else "Spin 🎲", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
+        }
         error?.let { Text(it, color = Warn, fontSize = 14.sp) }
 
         result?.let { d ->
             Column(Modifier.fillMaxWidth().gradientCard().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                // lead with a gameplay shot (skip the first, which is usually the title screen)
+                (d.screenshots.getOrNull(1) ?: d.screenshots.firstOrNull())?.let { hero ->
+                    AsyncImage(model = hero, contentDescription = null,
+                        modifier = Modifier.fillMaxWidth().aspectRatio(1.77f).clip(RoundedCornerShape(10.dp)))
+                }
                 Row {
                     d.coverBig?.let {
                         AsyncImage(model = it, contentDescription = d.name,
@@ -223,14 +231,6 @@ fun RandomScreen(vm: AppViewModel, nav: NavHostController) {
                         }
                     }
                 }
-                if (d.screenshots.isNotEmpty()) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        d.screenshots.forEach { shot ->
-                            AsyncImage(model = shot, contentDescription = null,
-                                modifier = Modifier.weight(1f).aspectRatio(1.77f).clip(RoundedCornerShape(8.dp)))
-                        }
-                    }
-                }
                 d.summary?.let { Text(it, color = Cream, fontSize = 14.sp, maxLines = 6) }
                 BigLinkButtons(d.name)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -243,7 +243,7 @@ fun RandomScreen(vm: AppViewModel, nav: NavHostController) {
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = LogoBlue),
                         modifier = Modifier.weight(1f)
-                    ) { Text("Now playing", fontSize = 14.sp) }
+                    ) { Text("+ Now playing", fontSize = 14.sp) }
                     Button(
                         onClick = {
                             vm.pendingNp = AppViewModel.PendingNp(d.name,
@@ -253,12 +253,14 @@ fun RandomScreen(vm: AppViewModel, nav: NavHostController) {
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = LogoBlue),
                         modifier = Modifier.weight(1f)
-                    ) { Text("Backlog", fontSize = 14.sp) }
-                }
-                OutlinedButton(onClick = { spin() }, modifier = Modifier.fillMaxWidth(), enabled = !spinning) {
-                    Text("Roll again 🎲")
+                    ) { Text("+ Backlog", fontSize = 14.sp) }
                 }
             }
+            Button(
+                enabled = enabled && !spinning, onClick = { spin() },
+                colors = ButtonDefaults.buttonColors(containerColor = LogoBlue),
+                modifier = Modifier.fillMaxWidth()
+            ) { Text(if (spinning) "Spinning…" else "Roll again 🎲", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
         }
         Spacer(Modifier.height(20.dp))
     }

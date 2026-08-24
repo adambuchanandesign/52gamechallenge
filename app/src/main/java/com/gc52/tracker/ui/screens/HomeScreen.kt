@@ -36,7 +36,7 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
     val yearCounts by vm.yearCounts.collectAsState()
     val playing by vm.playing.collectAsState()
     val backlogList by vm.backlog.collectAsState()
-    val onThisWeek by vm.onThisWeek.collectAsState()
+    val onThisDay by vm.onThisDay.collectAsState()
     var showAddPlaying by remember { mutableStateOf(false) }
 
     fun openGames(year: Int? = null, platform: String? = null) {
@@ -140,14 +140,10 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
         // ---- History ----
         item { SectionBreak() }
         item { H1("History") }
-        if (onThisWeek.isNotEmpty()) {
-            item { H2("On this week") }
-            items(onThisWeek.take(6).chunked(2), key = { "w" + it.first().id }) { pair ->
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Box(Modifier.weight(1f)) { GameGridCell(pair[0]) { nav.navigate("detail/${pair[0].id}") } }
-                    if (pair.size > 1) Box(Modifier.weight(1f)) { GameGridCell(pair[1]) { nav.navigate("detail/${pair[1].id}") } }
-                    else Spacer(Modifier.weight(1f))
-                }
+        if (onThisDay.isNotEmpty()) {
+            item { H2("On this day") }
+            items(onThisDay, key = { "d" + it.id }) { g ->
+                GameRow(g) { nav.navigate("detail/${g.id}") }
             }
         }
         item { H2("Browse by year") }
@@ -225,7 +221,7 @@ fun BeatenSearch(vm: AppViewModel) {
         value = query,
         onValueChange = { vm.query.value = it },
         modifier = Modifier.fillMaxWidth(),
-        placeholder = { Text("Have I beaten this…?", color = Muted) },
+        placeholder = { Text("Search database", color = Muted) },
         leadingIcon = { Icon(Icons.Filled.Search, null, tint = LogoBlueLight) },
         singleLine = true,
         colors = OutlinedTextFieldDefaults.colors(
@@ -312,7 +308,8 @@ fun MiniPlayingCard(modifier: Modifier, p: Playing, vm: AppViewModel, nav: NavHo
         }
         Spacer(Modifier.height(6.dp))
         Text(p.name, color = Cream, fontWeight = FontWeight.SemiBold, fontSize = 15.sp,
-            maxLines = 2, modifier = Modifier.fillMaxWidth())
+            maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            modifier = Modifier.fillMaxWidth())
         Text(p.platform, color = Muted, fontSize = 14.sp, maxLines = 1, modifier = Modifier.fillMaxWidth())
     }
 }

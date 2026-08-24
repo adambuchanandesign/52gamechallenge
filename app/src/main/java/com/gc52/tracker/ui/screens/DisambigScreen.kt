@@ -60,7 +60,7 @@ fun DisambigScreen(vm: AppViewModel, nav: NavHostController, mode: String = "pla
 
         // Manual entry - expanded by default when nothing is being searched
         item {
-            var manualOpen by remember { mutableStateOf(query.isEmpty()) }
+            var manualOpen by remember { mutableStateOf(false) }
             Column(Modifier.fillMaxWidth().gradientCard().padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(

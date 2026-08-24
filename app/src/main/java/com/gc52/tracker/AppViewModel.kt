@@ -176,6 +176,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
     fun updatePlaying(p: Playing) { viewModelScope.launch(Dispatchers.IO) { dao.updatePlaying(p) } }
+    /** Demote a Now-playing entry back onto the backlog. */
+    fun moveToBacklog(p: Playing) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.insertBacklog(Backlog(name = p.name, platform = p.platform,
+                added = java.time.LocalDate.now().toString(), notes = p.notes, coverUrl = p.coverUrl))
+            dao.deletePlaying(p)
+        }
+    }
 
     // ---- backlog ----
     val backlog = dao.backlog().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
@@ -200,16 +208,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     // ---- history: on this week / month in past years ----
-    private fun weekOf(d: java.time.LocalDate) =
-        d.get(java.time.temporal.WeekFields.of(java.util.Locale.UK).weekOfWeekBasedYear())
-    val onThisWeek: StateFlow<List<Game>> = dao.newestFirst().map { all ->
+    val onThisDay: StateFlow<List<Game>> = dao.newestFirst().map { all ->
         val now = java.time.LocalDate.now()
-        val w = weekOf(now)
-        all.filter { g ->
-            g.year != now.year && g.date != null &&
-                runCatching { java.time.LocalDate.parse(g.date.take(10)) }.getOrNull()
-                    ?.let { weekOf(it) == w } == true
-        }
+        val md = "-%02d-%02d".format(now.monthValue, now.dayOfMonth)
+        all.filter { g -> g.year != now.year && g.date != null && g.date.take(10).endsWith(md) }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
     val onThisMonth: StateFlow<List<Game>> = dao.newestFirst().map { all ->
         val now = java.time.LocalDate.now()

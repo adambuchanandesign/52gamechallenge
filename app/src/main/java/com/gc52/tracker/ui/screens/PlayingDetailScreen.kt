@@ -92,9 +92,18 @@ fun PlayingDetailScreen(vm: AppViewModel, nav: NavHostController, id: Long) {
         ) { Text("Beaten! Log it", fontWeight = FontWeight.Bold) }
 
         OutlinedButton(
+            onClick = {
+                vm.moveToBacklog(p)
+                nav.navigate("backlog") { popUpTo("home"); launchSingleTop = true }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) { Text("Move to backlog", color = LogoBlueLight) }
+        OutlinedButton(
             onClick = { confirmRemove = true },
             modifier = Modifier.fillMaxWidth()
         ) { Text("Remove from Now playing", color = Warn) }
+
+        com.gc52.tracker.IgdbAboutBlock(vm, p.name)
         Spacer(Modifier.height(20.dp))
     }
 
