@@ -346,6 +346,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         enrichJob?.cancel()
         enrichState.value = enrichState.value.copy(running = false)
     }
+    /** Force re-fetch IGDB data for one game, overwriting whatever is stored. */
+    suspend fun refreshIgdb(g: Game): Game? {
+        if (!igdbEnabled.value) return null
+        val d = kotlinx.coroutines.withContext(Dispatchers.IO) {
+            Igdb.details(getApplication(), g.name)
+        } ?: return null
+        val updated = enrichedCopy(g, d)
+        kotlinx.coroutines.withContext(Dispatchers.IO) { dao.update(updated) }
+        detailsCache.remove(g.name)
+        return updated
+    }
+
     /** Enrich a single new game in the background (fire and forget). */
     private fun enrichOne(id: Long) {
         if (!igdbEnabled.value) return
@@ -357,8 +369,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     // ---- random picker ----
-    suspend fun randomGame(genreId: Int?, era: Pair<Int, Int>?, typeCat: Int? = null): Igdb.Details? =
-        kotlinx.coroutines.withContext(Dispatchers.IO) { Igdb.randomPick(getApplication(), genreId, era, typeCat) }
+    suspend fun randomGame(genreId: Int?, era: Pair<Int, Int>?, typeIds: List<Int>? = null): Igdb.Details? =
+        kotlinx.coroutines.withContext(Dispatchers.IO) { Igdb.randomPick(getApplication(), genreId, era, typeIds) }
     suspend fun beatenMatch(name: String): Game? {
         val n = normalizeTitle(name)
         return dao.allOnce().firstOrNull { it.normName == n }

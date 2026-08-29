@@ -105,8 +105,14 @@ object Igdb {
         "Puzzle" to 9, "Adventure" to 31, "Strategy" to 15, "Sport" to 14, "Arcade" to 33,
         "Point & click" to 2, "Hack and slash" to 25, "Indie" to 32
     )
-    // IGDB platform categories: 1 console, 5 portable console, 6 computer
-    val TYPES = linkedMapOf("Console" to 1, "Handheld" to 5, "PC" to 6)
+    // Curated IGDB platform-id lists (the old platforms.category field is deprecated
+    // server-side and errors out, so we filter on explicit ids instead - stable forever)
+    val TYPES: LinkedHashMap<String, List<Int>> = linkedMapOf(
+        "Console" to listOf(18, 19, 4, 21, 5, 41, 130, 7, 8, 9, 48, 167, 11, 12, 49, 169,
+            29, 64, 32, 23, 30, 78, 86, 150, 80, 50, 62, 59, 66, 60, 68, 67, 70, 87, 51, 99),
+        "Handheld" to listOf(33, 22, 24, 20, 37, 38, 46, 35, 61, 119, 120, 57, 123, 42, 166),
+        "PC" to listOf(6, 13, 14, 3, 16, 15, 26, 25, 27, 63, 75, 121, 69, 149)
+    )
 
     val ERAS = linkedMapOf(
         "1980s" to (1980 to 1989), "1990s" to (1990 to 1999), "2000s" to (2000 to 2009),
@@ -166,11 +172,11 @@ object Igdb {
     }
 
     /** Random reasonably-known game, optionally filtered by genre id and/or release decade. */
-    fun randomPick(ctx: Context, genreId: Int?, era: Pair<Int, Int>?, typeCat: Int? = null): Details? {
+    fun randomPick(ctx: Context, genreId: Int?, era: Pair<Int, Int>?, typeIds: List<Int>? = null): Details? {
         val where = buildList {
             add("rating_count > 5"); add("cover != null")
             genreId?.let { add("genres = ($it)") }
-            typeCat?.let { add("platforms.category = ($it)") }
+            typeIds?.let { add("platforms = (${it.joinToString(",")})") }
             era?.let { (a, b) ->
                 val from = java.time.LocalDate.of(a, 1, 1).toEpochDay() * 86400
                 val to = java.time.LocalDate.of(b, 12, 31).toEpochDay() * 86400

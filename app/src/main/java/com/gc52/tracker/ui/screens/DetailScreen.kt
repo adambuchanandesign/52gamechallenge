@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
+import kotlinx.coroutines.launch
 import com.gc52.tracker.AppViewModel
 import com.gc52.tracker.PlatformIcon
 import com.gc52.tracker.data.Game
@@ -124,28 +125,21 @@ fun DetailScreen(vm: AppViewModel, nav: NavHostController, id: Long) {
             EditForm(g) { updated -> vm.update(updated) { }; game = updated; editing = false }
         }
 
-        // IGDB info block
-        var igdbInfo by remember(g.id) { mutableStateOf<com.gc52.tracker.data.Igdb.Details?>(null) }
-        LaunchedEffect(g.id) { igdbInfo = vm.igdbDetails(g.name) }
-        igdbInfo?.let { d ->
-            Spacer(Modifier.height(12.dp))
-            Column(Modifier.fillMaxWidth().gradientCard().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("About (IGDB)", color = LogoBlueLight, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                Row {
-                    d.coverBig?.let {
-                        coil.compose.AsyncImage(model = it, contentDescription = d.name,
-                            modifier = Modifier.width(90.dp).clip(RoundedCornerShape(8.dp)))
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column {
-                        Text(d.name + (d.year?.let { " ($it)" } ?: ""), color = Cream,
-                            fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                        if (d.genres.isNotEmpty()) Text(d.genres.joinToString(" · "), color = Muted, fontSize = 13.sp)
-                        com.gc52.tracker.SmallLinkRow(g.name)
-                    }
+        // IGDB info block (shared component - same layout as Now Playing / Backlog)
+        Spacer(Modifier.height(12.dp))
+        com.gc52.tracker.IgdbAboutBlock(vm, g.name)
+        var refreshMsg by remember { mutableStateOf<String?>(null) }
+        val refreshScope = rememberCoroutineScope()
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = {
+                refreshMsg = "Refreshing…"
+                refreshScope.launch {
+                    val updated = vm.refreshIgdb(g)
+                    if (updated != null) { game = updated; refreshMsg = "IGDB data refreshed ✓" }
+                    else refreshMsg = "No IGDB match found for this name"
                 }
-                d.summary?.let { Text(it, color = Cream, fontSize = 14.sp) }
-            }
+            }) { Text("Refresh IGDB data", color = Muted, fontSize = 14.sp) }
+            refreshMsg?.let { Text(it, color = if (it.startsWith("IGDB")) Good else Muted, fontSize = 13.sp) }
         }
         Spacer(Modifier.height(24.dp))
     }
