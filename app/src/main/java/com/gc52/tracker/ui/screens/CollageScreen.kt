@@ -187,16 +187,28 @@ fun TileBox(modifier: Modifier, t: TileState, selected: Boolean,
             }
     ) {
         if (t.uri != null) {
-            AsyncImage(
-                model = t.uri, contentDescription = null,
-                contentScale = ContentScale.FillHeight,
-                modifier = Modifier.fillMaxSize().graphicsLayer {
-                    scaleX = t.scale; scaleY = t.scale
-                    rotationZ = t.rotation
-                    translationX = t.offX * size.width
-                    translationY = t.offY * size.height
+            // The image node keeps the photo's REAL aspect ratio (height = tile height,
+            // width whatever that implies) so nothing is pre-clipped to the square -
+            // the tile's own clipToBounds is the only crop, and panning reaches everything.
+            val painter = coil.compose.rememberAsyncImagePainter(t.uri)
+            val intrinsic = painter.intrinsicSize
+            if (intrinsic != androidx.compose.ui.geometry.Size.Unspecified && intrinsic.height > 0f) {
+                androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+                    val ratio = intrinsic.width / intrinsic.height
+                    val tilePx = constraints.maxWidth.toFloat()
+                    androidx.compose.foundation.Image(
+                        painter, contentDescription = null,
+                        modifier = Modifier.align(Alignment.Center)
+                            .graphicsLayer {
+                                scaleX = t.scale; scaleY = t.scale
+                                rotationZ = t.rotation
+                                translationX = t.offX * tilePx
+                                translationY = t.offY * tilePx
+                            }
+                            .requiredSize(width = maxHeight * ratio, height = maxHeight)
+                    )
                 }
-            )
+            }
         } else {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Box(
