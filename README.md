@@ -5,7 +5,7 @@ week, log it, collage it. Eleven years of a spreadsheet, now with a proper
 home. Built with Kotlin + Jetpack Compose + Room, compiled entirely by
 GitHub Actions — no local Android tooling ever needed.
 
-<img width="540" alt="Screenshot_20260829-141840" src="https://github.com/user-attachments/assets/92db6104-4bf5-4722-99aa-d6839b95cb35" /> <img width="540" alt="Screenshot_20260829-141905" src="https://github.com/user-attachments/assets/6a0e6873-5e94-4b32-a4f0-2a54d471b381" />
+<img width="360" alt="Screenshot_20260829-141840" src="https://github.com/user-attachments/assets/92db6104-4bf5-4722-99aa-d6839b95cb35" /> <img width="360" alt="Screenshot_20260829-141905" src="https://github.com/user-attachments/assets/6a0e6873-5e94-4b32-a4f0-2a54d471b381" />
 
 
 
