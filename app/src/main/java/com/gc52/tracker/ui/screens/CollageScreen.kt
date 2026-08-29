@@ -45,8 +45,18 @@ class TileState {
     var offX by mutableStateOf(0f)   // fraction of tile size
     var offY by mutableStateOf(0f)
     var rotation by mutableStateOf(0f)
-    var fit by mutableStateOf(true)  // always whole shot (letterboxed), zoom/pan from there
+    var fit by mutableStateOf(false) // fill the frame by default - no gaps; zoom/pan/rotate from there
     fun reset() { scale = 1f; offX = 0f; offY = 0f; rotation = 0f }
+    /** Rotate about the tile centre: the pan offset swings with the image. */
+    fun rotateBy(deg: Float) {
+        val rad = Math.toRadians(deg.toDouble())
+        val cos = kotlin.math.cos(rad); val sin = kotlin.math.sin(rad)
+        val nx = (offX * cos - offY * sin).toFloat()
+        val ny = (offX * sin + offY * cos).toFloat()
+        offX = nx; offY = ny
+        rotation = (((rotation + deg) % 360f) + 360f) % 360f
+    }
+    fun straighten() { rotateBy(-rotation) }
 }
 
 @Composable
@@ -112,10 +122,10 @@ fun CollageScreen(vm: AppViewModel, nav: NavHostController, gameId: Long) {
             Text("Tile ${active + 1}:", color = LogoBlueLight, fontWeight = FontWeight.Bold)
             if (t.uri != null) {
                 OutlinedButton(onClick = { pick.launch("image/*") }) { Text("Change photo") }
-                TextButton(onClick = { t.rotation = (t.rotation + 90f) % 360f }) {
+                TextButton(onClick = { t.rotateBy(90f) }) {
                     Text("Rotate 90°", color = LogoBlueLight)
                 }
-                TextButton(onClick = { t.rotation = 0f }, enabled = t.rotation != 0f) {
+                TextButton(onClick = { t.straighten() }, enabled = t.rotation != 0f) {
                     Text("Straighten", color = if (t.rotation != 0f) LogoBlueLight else Muted)
                 }
                 TextButton(onClick = { t.reset() }) { Text("Reset", color = Muted) }
@@ -164,7 +174,7 @@ fun TileBox(modifier: Modifier, t: TileState, selected: Boolean,
                     onSelect()
                     if (t.uri != null) {
                         t.scale = (t.scale * zoom).coerceIn(0.3f, 6f)
-                        t.rotation += rot
+                        t.rotateBy(rot)
                         t.offX += pan.x / size.width
                         t.offY += pan.y / size.height
                     }
