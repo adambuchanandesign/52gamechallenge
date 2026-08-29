@@ -105,6 +105,9 @@ object Igdb {
         "Puzzle" to 9, "Adventure" to 31, "Strategy" to 15, "Sport" to 14, "Arcade" to 33,
         "Point & click" to 2, "Hack and slash" to 25, "Indie" to 32
     )
+    // IGDB platform categories: 1 console, 5 portable console, 6 computer
+    val TYPES = linkedMapOf("Console" to 1, "Handheld" to 5, "PC" to 6)
+
     val ERAS = linkedMapOf(
         "1980s" to (1980 to 1989), "1990s" to (1990 to 1999), "2000s" to (2000 to 2009),
         "2010s" to (2010 to 2019), "2020s" to (2020 to 2029)
@@ -163,10 +166,11 @@ object Igdb {
     }
 
     /** Random reasonably-known game, optionally filtered by genre id and/or release decade. */
-    fun randomPick(ctx: Context, genreId: Int?, era: Pair<Int, Int>?): Details? {
+    fun randomPick(ctx: Context, genreId: Int?, era: Pair<Int, Int>?, typeCat: Int? = null): Details? {
         val where = buildList {
             add("rating_count > 5"); add("cover != null")
             genreId?.let { add("genres = ($it)") }
+            typeCat?.let { add("platforms.category = ($it)") }
             era?.let { (a, b) ->
                 val from = java.time.LocalDate.of(a, 1, 1).toEpochDay() * 86400
                 val to = java.time.LocalDate.of(b, 12, 31).toEpochDay() * 86400

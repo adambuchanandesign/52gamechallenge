@@ -145,6 +145,7 @@ fun BacklogDetailScreen(vm: AppViewModel, nav: NavHostController, id: Long) {
 fun RandomScreen(vm: AppViewModel, nav: NavHostController) {
     var genre by remember { mutableStateOf<String?>(null) }
     var era by remember { mutableStateOf<String?>(null) }
+    var type by remember { mutableStateOf<String?>(null) }
     var result by remember { mutableStateOf<Igdb.Details?>(null) }
     var beaten by remember { mutableStateOf<com.gc52.tracker.data.Game?>(null) }
     var spinning by remember { mutableStateOf(false) }
@@ -156,7 +157,8 @@ fun RandomScreen(vm: AppViewModel, nav: NavHostController) {
     fun spin() {
         spinning = true; error = null
         scope.launch {
-            val d = vm.randomGame(genre?.let { Igdb.GENRES[it] }, era?.let { Igdb.ERAS[it] })
+            val d = vm.randomGame(genre?.let { Igdb.GENRES[it] }, era?.let { Igdb.ERAS[it] },
+                type?.let { Igdb.TYPES[it] })
             if (d == null) error = "Nothing came back — check IGDB credentials or loosen the filters"
             else { result = d; beaten = vm.beatenMatch(d.name); filtersOpen = false }
             spinning = false
@@ -184,7 +186,7 @@ fun RandomScreen(vm: AppViewModel, nav: NavHostController) {
                 H2("Filters")
                 if (!filtersOpen) {
                     Text(
-                        listOfNotNull(genre, era).ifEmpty { listOf("Anything goes") }.joinToString(" · "),
+                        listOfNotNull(type, genre, era).ifEmpty { listOf("Anything goes") }.joinToString(" · "),
                         color = Muted, fontSize = 13.sp
                     )
                 }
@@ -192,6 +194,16 @@ fun RandomScreen(vm: AppViewModel, nav: NavHostController) {
             Text(if (filtersOpen) "▲" else "▼", color = Muted, fontSize = 14.sp)
         }
         if (filtersOpen) {
+            Text("Type", color = Muted, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Igdb.TYPES.keys.forEach { ty ->
+                    FilterChip(selected = type == ty, onClick = { type = if (type == ty) null else ty },
+                        label = { Text(ty, fontSize = 13.sp) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = LogoBlue, selectedLabelColor = Cream,
+                            containerColor = Surface1, labelColor = Muted))
+                }
+            }
             Text("Genre", color = Muted, fontSize = 14.sp, fontWeight = FontWeight.Medium)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Igdb.GENRES.keys.forEach { g ->

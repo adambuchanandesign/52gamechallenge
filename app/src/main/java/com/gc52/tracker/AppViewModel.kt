@@ -357,8 +357,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     // ---- random picker ----
-    suspend fun randomGame(genreId: Int?, era: Pair<Int, Int>?): Igdb.Details? =
-        kotlinx.coroutines.withContext(Dispatchers.IO) { Igdb.randomPick(getApplication(), genreId, era) }
+    suspend fun randomGame(genreId: Int?, era: Pair<Int, Int>?, typeCat: Int? = null): Igdb.Details? =
+        kotlinx.coroutines.withContext(Dispatchers.IO) { Igdb.randomPick(getApplication(), genreId, era, typeCat) }
     suspend fun beatenMatch(name: String): Game? {
         val n = normalizeTitle(name)
         return dao.allOnce().firstOrNull { it.normName == n }

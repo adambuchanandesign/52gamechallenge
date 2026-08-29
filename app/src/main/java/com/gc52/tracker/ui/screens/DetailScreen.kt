@@ -64,6 +64,13 @@ fun DetailScreen(vm: AppViewModel, nav: NavHostController, id: Long) {
                 model = img, contentDescription = g.name, contentScale = ContentScale.Fit,
                 modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
             )
+        } else if (g.igdbCover != null) {
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                AsyncImage(
+                    model = g.igdbCover, contentDescription = g.name,
+                    modifier = Modifier.width(200.dp).clip(RoundedCornerShape(16.dp))
+                )
+            }
         } else {
             Box(
                 Modifier.fillMaxWidth().aspectRatio(1f).gradientCard(),

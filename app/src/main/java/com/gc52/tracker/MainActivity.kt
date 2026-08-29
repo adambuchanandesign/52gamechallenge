@@ -327,12 +327,17 @@ fun GameLargeCell(g: Game, onClick: () -> Unit) {
             modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(12.dp)).background(Surface2),
             contentAlignment = Alignment.Center
         ) {
-            if (uri != null) {
-                AsyncImage(
+            when {
+                uri != null -> AsyncImage(
                     model = uri, contentDescription = g.name,
                     contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()
                 )
-            } else PlatformIcon(g.platform, 64)
+                g.igdbCover != null -> AsyncImage(
+                    model = g.igdbCover, contentDescription = g.name,
+                    contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()
+                )
+                else -> PlatformIcon(g.platform, 64)
+            }
         }
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -361,12 +366,17 @@ fun GameGridCell(g: Game, onClick: () -> Unit) {
             modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(10.dp)).background(Surface2),
             contentAlignment = Alignment.Center
         ) {
-            if (uri != null) {
-                AsyncImage(
+            when {
+                uri != null -> AsyncImage(
                     model = uri, contentDescription = g.name,
                     contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()
                 )
-            } else PlatformIcon(g.platform, 48)
+                g.igdbCover != null -> AsyncImage(
+                    model = g.igdbCover, contentDescription = g.name,
+                    contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()
+                )
+                else -> PlatformIcon(g.platform, 48)
+            }
         }
         Spacer(Modifier.height(6.dp))
         Text(g.name, color = Cream, fontSize = 14.sp, maxLines = 1, fontWeight = FontWeight.Medium, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
@@ -457,6 +467,13 @@ fun IgdbAboutBlock(vm: AppViewModel, name: String) {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text("About (IGDB)", color = LogoBlueLight, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            (d.screenshots.getOrNull(1) ?: d.screenshots.firstOrNull())?.let { hero ->
+                AsyncImage(
+                    model = hero, contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxWidth().aspectRatio(1.33f).clip(RoundedCornerShape(10.dp))
+                )
+            }
             Row {
                 d.coverBig?.let {
                     AsyncImage(model = it, contentDescription = d.name,
