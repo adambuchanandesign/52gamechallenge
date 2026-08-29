@@ -44,9 +44,11 @@ fun AddScreen(vm: AppViewModel, nav: NavHostController, playingId: Long = -1L) {
         if (uri != null) picked = uri
     }
 
+    var carriedIgdbId by remember { mutableStateOf<Long?>(null) }
     LaunchedEffect(playingId) {
         if (playingId > 0) vm.playingItem(playingId)?.let { p ->
             name = p.name; platform = p.platform; if (!p.notes.isNullOrBlank()) notes = p.notes!!
+            carriedIgdbId = p.igdbId
         }
     }
     LaunchedEffect(name) { dups = if (name.trim().length >= 3) vm.duplicatesOf(name) else emptyList() }
@@ -114,7 +116,7 @@ fun AddScreen(vm: AppViewModel, nav: NavHostController, playingId: Long = -1L) {
         Button(
             enabled = name.isNotBlank() && platform.isNotBlank() && year.length == 4,
             onClick = {
-                vm.addGame(name, platform, year.toInt(), date.trim().ifBlank { null }, notes, replay, picked) { id ->
+                vm.addGame(name, platform, year.toInt(), date.trim().ifBlank { null }, notes, replay, picked, carriedIgdbId) { id ->
                 }
                 if (playingId > 0) vm.consumePlaying(playingId)
                 // Go home with a clean stack: popping back would land on the

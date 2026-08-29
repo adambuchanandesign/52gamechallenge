@@ -97,7 +97,8 @@ object Igdb {
     data class Details(
         val name: String, val year: Int?, val coverBig: String?,
         val summary: String?, val genres: List<String>, val platforms: List<String>,
-        val screenshots: List<String>, val rating: Double? = null
+        val screenshots: List<String>, val rating: Double? = null,
+        val igdbId: Long? = null
     )
 
     val GENRES = linkedMapOf(
@@ -156,18 +157,32 @@ object Igdb {
         return Details(
             o.optString("name"), year, cover,
             o.optString("summary").ifBlank { null }, names("genres"), names("platforms"), shots,
-            if (o.has("total_rating")) o.getDouble("total_rating") else null
+            if (o.has("total_rating")) o.getDouble("total_rating") else null,
+            if (o.has("id")) o.getLong("id") else null
         )
     }
 
     private const val DETAIL_FIELDS =
         "fields name, first_release_date, summary, genres.name, platforms.name, cover.image_id, screenshots.image_id, total_rating;"
 
-    /** Best single match for a game name, with summary/genres/screenshots. */
+    /** Exact lookup by IGDB id - unambiguous. */
+    fun detailsById(ctx: Context, id: Long): Details? {
+        val arr = query(ctx, "$DETAIL_FIELDS where id = $id; limit 1;") ?: return null
+        if (arr.length() == 0) return null
+        return parseDetails(arr.getJSONObject(0))
+    }
+
+    /** Best match for a game name: prefers an exact title match over search ranking
+     *  (IGDB happily ranks "Klonoa Heroes" above "Klonoa" for the query "Klonoa"). */
     fun details(ctx: Context, name: String): Details? {
         val q = name.replace("\"", "")
-        val arr = query(ctx, "search \"$q\"; $DETAIL_FIELDS limit 1;") ?: return null
+        val arr = query(ctx, "search \"$q\"; $DETAIL_FIELDS limit 10;") ?: return null
         if (arr.length() == 0) return null
+        val norm = name.lowercase().filter { it.isLetterOrDigit() }
+        for (i in 0 until arr.length()) {
+            val cand = arr.getJSONObject(i).optString("name").lowercase().filter { it.isLetterOrDigit() }
+            if (cand == norm) return parseDetails(arr.getJSONObject(i))
+        }
         return parseDetails(arr.getJSONObject(0))
     }
 

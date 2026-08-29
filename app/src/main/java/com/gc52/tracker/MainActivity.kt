@@ -458,9 +458,9 @@ fun MiniCard(modifier: Modifier, name: String, platform: String, coverUrl: Strin
 
 /** IGDB "About" panel used on beaten / now playing / backlog item pages. */
 @Composable
-fun IgdbAboutBlock(vm: AppViewModel, name: String) {
-    var info by remember(name) { mutableStateOf<com.gc52.tracker.data.Igdb.Details?>(null) }
-    LaunchedEffect(name) { info = vm.igdbDetails(name) }
+fun IgdbAboutBlock(vm: AppViewModel, name: String, igdbId: Long? = null) {
+    var info by remember(name, igdbId) { mutableStateOf<com.gc52.tracker.data.Igdb.Details?>(null) }
+    LaunchedEffect(name, igdbId) { info = vm.igdbDetails(name, igdbId) }
     info?.let { d ->
         Column(
             Modifier.fillMaxWidth().gradientCard().padding(14.dp),

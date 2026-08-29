@@ -109,8 +109,8 @@ fun NpAddScreen(vm: AppViewModel, nav: NavHostController) {
         Button(
             enabled = name.isNotBlank() && platform.isNotBlank(),
             onClick = {
-                if (pending?.target == "backlog") vm.addBacklog(name, platform, notes, pending.coverUrl)
-                else vm.addPlaying(name, platform, notes, pending?.coverUrl)
+                if (pending?.target == "backlog") vm.addBacklog(name, platform, notes, pending.coverUrl, pending.igdbId)
+                else vm.addPlaying(name, platform, notes, pending?.coverUrl, pending?.igdbId)
                 val dest = if (pending?.target == "backlog") "backlog" else "playing"
                 vm.pendingNp = null
                 vm.query.value = ""

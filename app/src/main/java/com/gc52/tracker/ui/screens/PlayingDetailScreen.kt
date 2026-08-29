@@ -103,7 +103,7 @@ fun PlayingDetailScreen(vm: AppViewModel, nav: NavHostController, id: Long) {
             modifier = Modifier.fillMaxWidth()
         ) { Text("Remove from Now playing", color = Warn) }
 
-        com.gc52.tracker.IgdbAboutBlock(vm, p.name)
+        com.gc52.tracker.IgdbAboutBlock(vm, p.name, p.igdbId)
         Spacer(Modifier.height(20.dp))
     }
 

@@ -127,7 +127,7 @@ fun DetailScreen(vm: AppViewModel, nav: NavHostController, id: Long) {
 
         // IGDB info block (shared component - same layout as Now Playing / Backlog)
         Spacer(Modifier.height(12.dp))
-        com.gc52.tracker.IgdbAboutBlock(vm, g.name)
+        com.gc52.tracker.IgdbAboutBlock(vm, g.name, g.igdbId)
         var refreshMsg by remember { mutableStateOf<String?>(null) }
         val refreshScope = rememberCoroutineScope()
         Row(verticalAlignment = Alignment.CenterVertically) {

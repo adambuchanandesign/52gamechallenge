@@ -21,7 +21,8 @@ data class Game(
     val igdbGenres: String? = null,   // "|"-separated
     val igdbCover: String? = null,
     val igdbRating: Double? = null,
-    val igdbSummary: String? = null
+    val igdbSummary: String? = null,
+    val igdbId: Long? = null
 )
 
 @Entity(tableName = "ideas")
@@ -38,7 +39,8 @@ data class Backlog(
     val platform: String,
     val added: String?,
     val notes: String?,
-    val coverUrl: String? = null
+    val coverUrl: String? = null,
+    val igdbId: Long? = null
 )
 
 @Entity(tableName = "playing")
@@ -48,7 +50,8 @@ data class Playing(
     val platform: String,
     val started: String?,
     val notes: String?,
-    val coverUrl: String? = null
+    val coverUrl: String? = null,
+    val igdbId: Long? = null
 )
 
 data class PlatformCount(val platform: String, val n: Int)
@@ -132,7 +135,7 @@ interface GameDao {
     @Query("DELETE FROM backlog WHERE id = :id") suspend fun deleteBacklogById(id: Long)
 }
 
-@Database(entities = [Game::class, Idea::class, Playing::class, Backlog::class], version = 5, exportSchema = false)
+@Database(entities = [Game::class, Idea::class, Playing::class, Backlog::class], version = 6, exportSchema = false)
 abstract class AppDb : RoomDatabase() {
     abstract fun dao(): GameDao
 
@@ -140,7 +143,7 @@ abstract class AppDb : RoomDatabase() {
         @Volatile private var inst: AppDb? = null
         fun get(ctx: Context): AppDb = inst ?: synchronized(this) {
             inst ?: Room.databaseBuilder(ctx.applicationContext, AppDb::class.java, "gc52.db")
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                 .build().also { inst = it }
         }
     }
@@ -171,6 +174,14 @@ val MIGRATION_4_5 = object : androidx.room.migration.Migration(4, 5) {
         db.execSQL("ALTER TABLE `games` ADD COLUMN `igdbCover` TEXT")
         db.execSQL("ALTER TABLE `games` ADD COLUMN `igdbRating` REAL")
         db.execSQL("ALTER TABLE `games` ADD COLUMN `igdbSummary` TEXT")
+    }
+}
+
+val MIGRATION_5_6 = object : androidx.room.migration.Migration(5, 6) {
+    override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `games` ADD COLUMN `igdbId` INTEGER")
+        db.execSQL("ALTER TABLE `playing` ADD COLUMN `igdbId` INTEGER")
+        db.execSQL("ALTER TABLE `backlog` ADD COLUMN `igdbId` INTEGER")
     }
 }
 

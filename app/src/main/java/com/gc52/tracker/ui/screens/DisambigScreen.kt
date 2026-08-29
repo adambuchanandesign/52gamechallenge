@@ -32,8 +32,8 @@ fun DisambigScreen(vm: AppViewModel, nav: NavHostController, mode: String = "pla
     val hits = (igdb as? AppViewModel.IgdbUi.Loaded)?.hits ?: emptyList()
     var similar by remember { mutableStateOf<List<Game>>(emptyList()) }
     LaunchedEffect(query) { similar = if (query.length >= 2) vm.duplicatesOf(query) else emptyList() }
-    fun pick(name: String, platforms: List<String>, cover: String?) {
-        vm.pendingNp = AppViewModel.PendingNp(name, platforms, cover, target = mode)
+    fun pick(name: String, platforms: List<String>, cover: String?, igdbId: Long? = null) {
+        vm.pendingNp = AppViewModel.PendingNp(name, platforms, cover, target = mode, igdbId = igdbId)
         nav.navigate("npadd")
     }
 
@@ -84,7 +84,7 @@ fun DisambigScreen(vm: AppViewModel, nav: NavHostController, mode: String = "pla
         items(hits, key = { it.id }) { h ->
             Row(
                 Modifier.fillMaxWidth().gradientCard()
-                    .clickable { pick(h.name, h.platforms.map { Igdb.mapPlatform(it) }.distinct(), h.coverUrl) }
+                    .clickable { pick(h.name, h.platforms.map { Igdb.mapPlatform(it) }.distinct(), h.coverUrl, h.id) }
                     .padding(10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {

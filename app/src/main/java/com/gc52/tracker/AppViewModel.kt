@@ -72,7 +72,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun addGame(name: String, platform: String, year: Int, date: String?, notes: String?,
-                replay: Boolean, pickedImage: Uri?, onDone: (Long) -> Unit) {
+                replay: Boolean, pickedImage: Uri?, igdbId: Long? = null, onDone: (Long) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             val seq = dao.maxSeq(year) + 1
             var imageFile: String? = null
@@ -84,7 +84,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val id = dao.insert(
                 Game(year = year, seq = seq, name = name.trim(), platform = platform.trim(),
                     date = date, imageFile = imageFile, notes = notes?.ifBlank { null },
-                    replay = replay, normName = normalizeTitle(name))
+                    replay = replay, normName = normalizeTitle(name), igdbId = igdbId)
             )
             onDone(id)
             enrichOne(id)
@@ -167,14 +167,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val playing = dao.playing().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     data class PendingNp(val name: String, val platforms: List<String>, val coverUrl: String?,
-                         val target: String = "playing")  // "playing" | "backlog"
+                         val target: String = "playing",  // "playing" | "backlog"
+                         val igdbId: Long? = null)
     var pendingNp: PendingNp? = null
 
-    fun addPlaying(name: String, platform: String, notes: String?, coverUrl: String? = null) {
+    fun addPlaying(name: String, platform: String, notes: String?, coverUrl: String? = null,
+                   igdbId: Long? = null) {
         viewModelScope.launch(Dispatchers.IO) {
             dao.insertPlaying(Playing(name = name.trim(), platform = platform.trim(),
                 started = java.time.LocalDate.now().toString(), notes = notes?.ifBlank { null },
-                coverUrl = coverUrl))
+                coverUrl = coverUrl, igdbId = igdbId))
         }
     }
     fun updatePlaying(p: Playing) { viewModelScope.launch(Dispatchers.IO) { dao.updatePlaying(p) } }
@@ -182,18 +184,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun moveToBacklog(p: Playing) {
         viewModelScope.launch(Dispatchers.IO) {
             dao.insertBacklog(Backlog(name = p.name, platform = p.platform,
-                added = java.time.LocalDate.now().toString(), notes = p.notes, coverUrl = p.coverUrl))
+                added = java.time.LocalDate.now().toString(), notes = p.notes, coverUrl = p.coverUrl,
+                igdbId = p.igdbId))
             dao.deletePlaying(p)
         }
     }
 
     // ---- backlog ----
     val backlog = dao.backlog().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
-    fun addBacklog(name: String, platform: String, notes: String?, coverUrl: String? = null) {
+    fun addBacklog(name: String, platform: String, notes: String?, coverUrl: String? = null,
+                   igdbId: Long? = null) {
         viewModelScope.launch(Dispatchers.IO) {
             dao.insertBacklog(Backlog(name = name.trim(), platform = platform.trim(),
                 added = java.time.LocalDate.now().toString(), notes = notes?.ifBlank { null },
-                coverUrl = coverUrl))
+                coverUrl = coverUrl, igdbId = igdbId))
         }
     }
     fun updateBacklog(b: Backlog) { viewModelScope.launch(Dispatchers.IO) { dao.updateBacklog(b) } }
@@ -204,7 +208,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun startPlayingFromBacklog(b: Backlog) {
         viewModelScope.launch(Dispatchers.IO) {
             dao.insertPlaying(Playing(name = b.name, platform = b.platform,
-                started = java.time.LocalDate.now().toString(), notes = b.notes, coverUrl = b.coverUrl))
+                started = java.time.LocalDate.now().toString(), notes = b.notes, coverUrl = b.coverUrl,
+                igdbId = b.igdbId))
             dao.deleteBacklog(b)
         }
     }
@@ -225,12 +230,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---- IGDB details cache (game detail page block) ----
     private val detailsCache = HashMap<String, Igdb.Details?>()
-    suspend fun igdbDetails(name: String): Igdb.Details? {
+    suspend fun igdbDetails(name: String, igdbId: Long? = null): Igdb.Details? {
         if (!igdbEnabled.value) return null
-        detailsCache[name]?.let { return it }
-        if (detailsCache.containsKey(name)) return null
-        val d = kotlinx.coroutines.withContext(Dispatchers.IO) { Igdb.details(getApplication(), name) }
-        detailsCache[name] = d
+        val key = igdbId?.let { "#$it" } ?: name
+        detailsCache[key]?.let { return it }
+        if (detailsCache.containsKey(key)) return null
+        val d = kotlinx.coroutines.withContext(Dispatchers.IO) {
+            if (igdbId != null) Igdb.detailsById(getApplication(), igdbId)
+            else Igdb.details(getApplication(), name)
+        }
+        detailsCache[key] = d
         return d
     }
 
@@ -322,8 +331,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             igdbGenres = d.genres.joinToString("|").ifBlank { "-" },
             igdbCover = d.coverBig,
             igdbRating = d.rating,
-            igdbSummary = d.summary
+            igdbSummary = d.summary,
+            igdbId = g.igdbId ?: d.igdbId
         )
+
+    /** Id lookup when we know the exact game; improved name search otherwise. */
+    private fun lookupDetails(g: Game): Igdb.Details? =
+        g.igdbId?.let { Igdb.detailsById(getApplication(), it) }
+            ?: Igdb.details(getApplication(), g.name)
 
     fun startEnrichment() {
         if (enrichState.value.running || !igdbEnabled.value) return
@@ -333,7 +348,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             enrichState.value = EnrichState(running = true, done = 0, total = todo.size)
             todo.forEachIndexed { i, g ->
                 if (!kotlinx.coroutines.currentCoroutineContext().isActive) return@launch
-                val d = Igdb.details(getApplication(), g.name)
+                val d = lookupDetails(g)
                 if (d != null) matched++
                 dao.update(enrichedCopy(g, d))
                 enrichState.value = EnrichState(true, i + 1, todo.size, matched)
@@ -350,11 +365,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     suspend fun refreshIgdb(g: Game): Game? {
         if (!igdbEnabled.value) return null
         val d = kotlinx.coroutines.withContext(Dispatchers.IO) {
-            Igdb.details(getApplication(), g.name)
+            lookupDetails(g)
         } ?: return null
         val updated = enrichedCopy(g, d)
         kotlinx.coroutines.withContext(Dispatchers.IO) { dao.update(updated) }
-        detailsCache.remove(g.name)
+        detailsCache.remove(g.name); detailsCache.remove("#${g.igdbId}"); detailsCache.remove("#${updated.igdbId}")
         return updated
     }
 
@@ -364,7 +379,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch(Dispatchers.IO) {
             val g = dao.byId(id) ?: return@launch
             if (g.igdbGenres != null) return@launch
-            dao.update(enrichedCopy(g, Igdb.details(getApplication(), g.name)))
+            dao.update(enrichedCopy(g, lookupDetails(g)))
         }
     }
 

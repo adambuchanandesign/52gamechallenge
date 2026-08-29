@@ -31,6 +31,7 @@ object Backup {
                     putOpt("igdbYear", g.igdbYear); putOpt("igdbGenres", g.igdbGenres)
                     putOpt("igdbCover", g.igdbCover); putOpt("igdbRating", g.igdbRating)
                     putOpt("igdbSummary", g.igdbSummary)
+                    putOpt("igdbId", g.igdbId)
                 })
             }
         })
@@ -39,7 +40,7 @@ object Backup {
                 put(JSONObject().apply {
                     put("name", p.name); put("platform", p.platform)
                     putOpt("started", p.started); putOpt("notes", p.notes)
-                    putOpt("coverUrl", p.coverUrl)
+                    putOpt("coverUrl", p.coverUrl); putOpt("igdbId", p.igdbId)
                 })
             }
         })
@@ -48,7 +49,7 @@ object Backup {
                 put(JSONObject().apply {
                     put("name", b.name); put("platform", b.platform)
                     putOpt("added", b.added); putOpt("notes", b.notes)
-                    putOpt("coverUrl", b.coverUrl)
+                    putOpt("coverUrl", b.coverUrl); putOpt("igdbId", b.igdbId)
                 })
             }
         })
@@ -80,7 +81,8 @@ object Backup {
                     igdbYear = if (o.has("igdbYear") && !o.isNull("igdbYear")) o.getInt("igdbYear") else null,
                     igdbGenres = o.strOrNull("igdbGenres"), igdbCover = o.strOrNull("igdbCover"),
                     igdbRating = if (o.has("igdbRating") && !o.isNull("igdbRating")) o.getDouble("igdbRating") else null,
-                    igdbSummary = o.strOrNull("igdbSummary")
+                    igdbSummary = o.strOrNull("igdbSummary"),
+                    igdbId = if (o.has("igdbId") && !o.isNull("igdbId")) o.getLong("igdbId") else null
                 ))
             }
             val playing = ArrayList<Playing>()
@@ -89,7 +91,8 @@ object Backup {
                 val o = pa.getJSONObject(i)
                 playing.add(Playing(name = o.getString("name"), platform = o.getString("platform"),
                     started = o.strOrNull("started"), notes = o.strOrNull("notes"),
-                    coverUrl = o.strOrNull("coverUrl")))
+                    coverUrl = o.strOrNull("coverUrl"),
+                    igdbId = if (o.has("igdbId") && !o.isNull("igdbId")) o.getLong("igdbId") else null)))
             }
             val backlog = ArrayList<Backlog>()
             val ba = root.optJSONArray("backlog") ?: JSONArray()
@@ -97,7 +100,8 @@ object Backup {
                 val o = ba.getJSONObject(i)
                 backlog.add(Backlog(name = o.getString("name"), platform = o.getString("platform"),
                     added = o.strOrNull("added"), notes = o.strOrNull("notes"),
-                    coverUrl = o.strOrNull("coverUrl")))
+                    coverUrl = o.strOrNull("coverUrl"),
+                    igdbId = if (o.has("igdbId") && !o.isNull("igdbId")) o.getLong("igdbId") else null)))
             }
             val series = ArrayList<String>()
             val sa = root.optJSONArray("series") ?: JSONArray()

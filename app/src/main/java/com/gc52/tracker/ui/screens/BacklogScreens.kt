@@ -123,7 +123,7 @@ fun BacklogDetailScreen(vm: AppViewModel, nav: NavHostController, id: Long) {
         OutlinedButton(onClick = { confirmRemove = true }, modifier = Modifier.fillMaxWidth()) {
             Text("Remove from backlog", color = Warn)
         }
-        IgdbAboutBlock(vm, b.name)
+        IgdbAboutBlock(vm, b.name, b.igdbId)
         Spacer(Modifier.height(20.dp))
     }
 
@@ -273,7 +273,7 @@ fun RandomScreen(vm: AppViewModel, nav: NavHostController) {
                         onClick = {
                             vm.pendingNp = AppViewModel.PendingNp(d.name,
                                 d.platforms.map { Igdb.mapPlatform(it) }.distinct(),
-                                d.coverBig, target = "playing")
+                                d.coverBig, target = "playing", igdbId = d.igdbId)
                             nav.navigate("npadd")
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = LogoBlue),
@@ -283,7 +283,7 @@ fun RandomScreen(vm: AppViewModel, nav: NavHostController) {
                         onClick = {
                             vm.pendingNp = AppViewModel.PendingNp(d.name,
                                 d.platforms.map { Igdb.mapPlatform(it) }.distinct(),
-                                d.coverBig, target = "backlog")
+                                d.coverBig, target = "backlog", igdbId = d.igdbId)
                             nav.navigate("npadd")
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = LogoBlue),
