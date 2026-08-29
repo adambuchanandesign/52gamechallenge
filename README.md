@@ -1,68 +1,153 @@
 # #52GameChallenge — Android tracker
 
-Sideloaded Kotlin + Jetpack Compose app for tracking beaten games.
-Built by GitHub Actions — no local Android tooling needed.
+A personal, sideloaded Android app for the #52GameChallenge: beat a game a
+week, log it, collage it. Eleven years of a spreadsheet, now with a proper
+home. Built with Kotlin + Jetpack Compose + Room, compiled entirely by
+GitHub Actions — no local Android tooling ever needed.
 
-## Building & updating
+---
 
-1. Repo root holds `settings.gradle.kts`, `app/`, `keystore/`, and
+## What it does
+
+- **Tracks beaten games** — 733 and counting — with year, N/52 sequence,
+  platform, date, notes, replay flag, and the square collage image for
+  each one.
+- **Now Playing & Backlog** — what's on the go and what's queued, each
+  with cover art, notes, and their own pages. Backlog entries promote to
+  Now Playing in one tap; Now Playing entries can log straight into the
+  beaten list, prefilled.
+- **Live IGDB search** — type in "Have I beaten this?" and get instant
+  local answers plus live IGDB results with covers; pick one to add it
+  with the right name, platforms and art.
+- **Random picker** 🎲 — filter by genre and/or era, spin, get a game
+  with art, screenshots and summary; add it to Now Playing or Backlog,
+  or roll again. Tells you if you already beat it.
+- **Collage builder** — recreate the classic 4-tile collage (title
+  screen / final area / ending / logo) from photos: tap a tile, pick a
+  photo, pinch/zoom/pan/twist, straighten or rotate 90°, save a
+  2048×2048 JPEG named correctly into the year folder.
+- **Stats** — games per year, eras, genres and release decades (bar or
+  pie), platform table, streaks, droughts, milestones, on-this-day
+  history, editable series counts, and a pile of fun facts.
+- **Backups** — automatic JSON snapshots after every change (newest 5
+  kept), one-tap full backup, old-school .xlsx spreadsheet export, CSV
+  export/import, and full restore with a confirmation preview.
+
+---
+
+## First-time setup, from scratch
+
+### 1. Build the APK (GitHub Actions)
+
+1. Create a GitHub repository and upload this project's contents:
+   `settings.gradle.kts`, `build.gradle.kts`, `gradle.properties`,
+   the `app/` folder, the `keystore/` folder, and
    `.github/workflows/android-apk.yml`.
-2. Pushing (or Run workflow) builds an optimised **release** APK signed
-   with the shared keystore in `keystore/debug.keystore`, so every build
-   installs over the previous one — no uninstalling.
-3. Download the `52GameChallenge-release-apk` artifact from the Actions
-   run, unzip, sideload `app-release.apk`.
+2. Every push (or Actions → Build APK → Run workflow) builds a signed
+   **release** APK. The signing key is the committed
+   `keystore/debug.keystore`, so every build installs *over the top* of
+   the previous one — settings and data survive updates.
+3. Download the `52GameChallenge-release-apk` artifact from the run,
+   unzip it, copy `app-release.apk` to the phone and install it
+   (allow "install from unknown sources" the first time).
 
-## First run on the phone
+### 2. The data folder
 
-1. Copy the renamed `52GameChallenge` folder to the phone (year folders
-   2015..2026 + `52gc-import.csv` at its root). A Syncthing-synced copy
-   works great.
-2. Settings (☰ menu) → Choose folder → pick it → Import now.
-3. Optional: drop replacement platform icons in `platform-icons/`
-   inside that folder as `<slug>.png` (e.g. `nintendo-switch.png`) —
-   no rebuild needed. 44 icons ship built-in; anything else gets an
-   initials tile.
+The app reads and writes everything inside one folder you own —
+recommended: a Syncthing-synced folder so images and backups are
+mirrored off the phone automatically.
 
-## What the app does (v0.14)
+Layout:
 
-- Top nav bar everywhere: ☰ full-screen menu (Homepage / Completed /
-  Now Playing / Stats / Settings), centred logo, + straight to Add.
-  Hides on scroll down, returns on scroll up.
-- Home: Have I beaten this? instant fuzzy search · Now Playing (two
-  cards + full page, "Beaten!" prefills the Add form) · clickable
-  stat cards with pace line · Browse by year grid · top platforms.
-- Completed: newest/oldest/A–Z, year + console filters with Clear,
-  list / grid / large-grid views, year dividers, collage thumbnails.
-- Game page: collage, details, notes card, edit everything, replay
-  flag, replace image from gallery (old one auto-archived), and the
-  collage builder: 3 photos + logo tile, pinch/zoom/rotate/pan or
-  letterbox per tile, saves a 2048×2048 JPEG named into the year
-  folder.
-- Add beaten: duplicate warning, platform autocomplete, auto N/52,
-  attach a ready-made collage from the gallery (renamed on save).
-- Stats: games-per-year chart, era breakdown, editable series counts,
-  fun facts, clickable platform table.
-- Backlog: queue of games to play, same IGDB-powered add flow,
-  per-item pages, one-tap promote to Now Playing.
-- Random picker: genre/era filters, IGDB-powered spin with box art,
-  gameplay shot, summary, beaten-check, and add buttons.
-- IGDB enrichment (Settings): one pass fetches genres, release year,
-  rating, cover and summary for every beaten game; unlocks the genre
-  and release-decade charts plus extra fun facts. New games enrich
-  automatically on add.
-- Backup & export (Settings): one-tap JSON backup of everything
-  (beaten + enrichment, Now Playing, Backlog, series), old-school
-  .xlsx spreadsheet export (List/Summary/Now Playing/Backlog sheets),
-  and Restore from backup with a confirm preview. Auto-backup writes
-  a snapshot after any data change and keeps the newest 5 — Syncthing
-  carries them off-device.
-- Settings: data folder picker (SAF), CSV import, timestamped CSV
-  export to `exports/`, IGDB credentials (masked).
+```
+52GameChallenge/
+├── 52gc-import.csv          ← seed data (optional, first import)
+├── 2015/ … 2026/            ← one folder per year of collage images
+│   └── 2015-001 - Game Name (Platform).jpg
+├── platform-icons/          ← optional custom icons: <slug>.png
+├── archive/                 ← replaced images land here (auto)
+└── exports/                 ← backups + exports land here (auto)
+```
 
-## Data files
+In the app: **☰ → Settings → Choose folder** → pick the folder →
+grant access. Then **Import now** if you have a `52gc-import.csv`
+(columns: Year, Number, Name, Console, Date, ImageFile, Notes).
 
-- `52gc-import.csv` — seed/import format (Year, Number, Name, Console,
-  Date, ImageFile, Notes). Exports round-trip through the same format.
-- Collages: `<year>/<year>-<nnn> - <Name> (<Platform>).jpg`
-- Replaced images land in `archive/`, exports in `exports/`.
+### 3. IGDB credentials (free, optional but worth it)
+
+Powers live search, covers, the random picker, About panels, and
+enrichment. Free, no card, no billing — the only limit is 4 requests
+per second, which normal use never hits.
+
+1. Create/log into a Twitch account and enable two-factor auth.
+2. Go to **dev.twitch.tv** → Your Console → Applications →
+   **Register Your Application**.
+3. Name: anything. OAuth Redirect URL: `http://localhost`.
+   Category: Application Integration.
+4. Open the app you created → copy the **Client ID** → click
+   **New Secret** → copy that too.
+5. In this app: **Settings → IGDB live search** → paste both →
+   **Save & test** → look for "Connected!".
+
+### 4. Enrichment (one-off, recommended)
+
+**Settings → IGDB enrichment → Run enrichment.** One pass fetches
+genres, release year, rating, cover and summary for every beaten game
+(a few minutes for ~700 games; pausable and resumable — it only ever
+processes games it hasn't done). Unlocks the genre and release-decade
+charts and extra fun facts. Games added later enrich themselves
+automatically.
+
+---
+
+## Using it day to day
+
+- **Beat a game?** Tap **+** in the top bar (or Add beaten / Add Game
+  in the menu). Duplicate names warn you. Attach a collage from the
+  gallery, or save first and use **Build collage** on the game's page.
+- **Started a game?** Home → Now playing → **+ Add** → search → pick
+  the IGDB match (or add manually) → platform chips + validation keep
+  your platform names consistent → **Start playing**.
+- **Someone recommends something?** Same flow into the **Backlog**.
+- **Can't decide?** **Random** in the menu. Spin. Argue with the
+  result. Roll again.
+- **"Have I beaten…?"** — the Home search answers instantly from your
+  list, and its IGDB block shows the whole series with beaten-checks.
+- **Collage builder** — game page → Build collage. Tap an empty tile
+  to pick its photo (always shown whole, letterboxed); pinch/drag/twist
+  to frame it; **Straighten** zeroes accidental rotation, **Rotate 90°**
+  turns it, **Reset** starts the tile over. Order: 1 = title screen,
+  2 = final area, 3 = ending; the logo fills tile 4. Save writes the
+  2048×2048 JPEG into the right year folder (replacing an old image
+  archives it first).
+- **Browsing** — Completed shows the collage wall (grid by default;
+  list and large views available), filterable by year/platform/sort,
+  with year dividers.
+
+## Backups & exports (Settings)
+
+- **Auto-backup**: after any data change, a JSON snapshot is written to
+  `exports/` (~8s later, batched); the newest 5 are kept. With the
+  folder in Syncthing this is an automatic offsite backup.
+- **Backup now**: full timestamped JSON — every beaten game including
+  enrichment, Now Playing, Backlog, series list. Credentials are never
+  included.
+- **Restore from backup…**: pick a backup JSON; you'll see exactly
+  what's in it and confirm before anything is replaced.
+- **Spreadsheet**: a real .xlsx with List / Summary / Now Playing /
+  Backlog sheets — the classic spreadsheet, reborn.
+- **Export now (CSV)**: the same 7-column format the import reads, for
+  round-tripping.
+
+## Updating the app
+
+Edit or re-upload files in the repo → Actions builds → sideload the
+new `app-release.apk` over the old one. Data, settings, credentials and
+the folder grant all persist. Database changes migrate automatically.
+
+## Platform icons
+
+44 ship built-in. To override or add: drop `<slug>.png` into
+`platform-icons/` in the data folder — e.g. `nintendo-snes.png`,
+`sega-mega-drive.png`. Anything unknown gets an initials tile. No
+rebuild needed; restart the app to clear its icon cache.

@@ -266,11 +266,6 @@ fun SettingsScreen(vm: AppViewModel, nav: NavHostController) {
             }
         }
 
-        Column(Modifier.fillMaxWidth().gradientCard().padding(14.dp)) {
-            Text("Roadmap", color = LogoBlueLight, fontWeight = FontWeight.Bold)
-            Text("Coming next: box art, platform icon manager, ideas backlog.",
-                color = Muted, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
-        }
     }
 }
 

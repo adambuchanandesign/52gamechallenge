@@ -11,8 +11,8 @@ android {
         applicationId = "com.gc52.tracker"
         minSdk = 26
         targetSdk = 34
-        versionCode = 14
-        versionName = "0.14"
+        versionCode = 16
+        versionName = "0.16"
     }
     signingConfigs {
         create("shared") {

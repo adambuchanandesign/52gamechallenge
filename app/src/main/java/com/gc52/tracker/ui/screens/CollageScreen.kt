@@ -45,7 +45,7 @@ class TileState {
     var offX by mutableStateOf(0f)   // fraction of tile size
     var offY by mutableStateOf(0f)
     var rotation by mutableStateOf(0f)
-    var fit by mutableStateOf(false) // false = fill/crop, true = whole shot with bars
+    var fit by mutableStateOf(true)  // always whole shot (letterboxed), zoom/pan from there
     fun reset() { scale = 1f; offX = 0f; offY = 0f; rotation = 0f }
 }
 
@@ -75,7 +75,7 @@ fun CollageScreen(vm: AppViewModel, nav: NavHostController, gameId: Long) {
                 Text("${g.name} (${g.platform})", color = Muted, fontSize = 14.sp, maxLines = 1)
             }
         }
-        Text("Tap a tile to select it, then pick its photo. Pinch to zoom, drag to pan, twist to rotate.",
+        Text("Tap an empty tile to pick its photo. Pinch to zoom, drag to pan, twist to rotate.",
             color = Muted, fontSize = 14.sp, modifier = Modifier.padding(vertical = 6.dp))
 
         // 2x2 preview: tiles 0,1 / 2,logo — white gutters like the originals
@@ -85,11 +85,14 @@ fun CollageScreen(vm: AppViewModel, nav: NavHostController, gameId: Long) {
             verticalArrangement = Arrangement.spacedBy(gutter)
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(gutter)) {
-                TileBox(Modifier.weight(1f), tiles[0], active == 0) { active = 0 }
-                TileBox(Modifier.weight(1f), tiles[1], active == 1) { active = 1 }
+                TileBox(Modifier.weight(1f), tiles[0], active == 0,
+                    onPickRequest = { active = 0; pick.launch("image/*") }) { active = 0 }
+                TileBox(Modifier.weight(1f), tiles[1], active == 1,
+                    onPickRequest = { active = 1; pick.launch("image/*") }) { active = 1 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(gutter)) {
-                TileBox(Modifier.weight(1f), tiles[2], active == 2) { active = 2 }
+                TileBox(Modifier.weight(1f), tiles[2], active == 2,
+                    onPickRequest = { active = 2; pick.launch("image/*") }) { active = 2 }
                 // fixed logo tile
                 Box(Modifier.weight(1f).aspectRatio(1f).clipToBounds()) {
                     val logo = remember {
@@ -107,14 +110,17 @@ fun CollageScreen(vm: AppViewModel, nav: NavHostController, gameId: Long) {
         val t = tiles[active]
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Tile ${active + 1}:", color = LogoBlueLight, fontWeight = FontWeight.Bold)
-            OutlinedButton(onClick = { pick.launch("image/*") }) {
-                Text(if (t.uri == null) "Pick photo" else "Change photo")
-            }
             if (t.uri != null) {
-                OutlinedButton(onClick = { t.fit = !t.fit; t.reset() }) {
-                    Text(if (t.fit) "Crop to fill" else "Whole shot")
+                OutlinedButton(onClick = { pick.launch("image/*") }) { Text("Change photo") }
+                TextButton(onClick = { t.rotation = (t.rotation + 90f) % 360f }) {
+                    Text("Rotate 90°", color = LogoBlueLight)
+                }
+                TextButton(onClick = { t.rotation = 0f }, enabled = t.rotation != 0f) {
+                    Text("Straighten", color = if (t.rotation != 0f) LogoBlueLight else Muted)
                 }
                 TextButton(onClick = { t.reset() }) { Text("Reset", color = Muted) }
+            } else {
+                Text("Tap the tile to pick its photo", color = Muted, fontSize = 14.sp)
             }
         }
         Text(
@@ -146,7 +152,8 @@ fun CollageScreen(vm: AppViewModel, nav: NavHostController, gameId: Long) {
 }
 
 @Composable
-fun TileBox(modifier: Modifier, t: TileState, selected: Boolean, onSelect: () -> Unit) {
+fun TileBox(modifier: Modifier, t: TileState, selected: Boolean,
+            onPickRequest: () -> Unit = {}, onSelect: () -> Unit) {
     Box(
         modifier
             .aspectRatio(1f)
@@ -164,7 +171,10 @@ fun TileBox(modifier: Modifier, t: TileState, selected: Boolean, onSelect: () ->
                 }
             }
             .pointerInput(t) {
-                detectTapGestures(onTap = { onSelect() })
+                detectTapGestures(onTap = {
+                    onSelect()
+                    if (t.uri == null) onPickRequest()
+                })
             }
     ) {
         if (t.uri != null) {
@@ -180,7 +190,12 @@ fun TileBox(modifier: Modifier, t: TileState, selected: Boolean, onSelect: () ->
             )
         } else {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Tap, then\npick photo", color = Muted, fontSize = 14.sp)
+                Box(
+                    Modifier.clip(RoundedCornerShape(8.dp)).background(LogoBlue)
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                ) {
+                    Text("Pick photo", color = Cream, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                }
             }
         }
         if (selected) {
