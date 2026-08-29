@@ -45,7 +45,21 @@ class TileState {
     var offX by mutableStateOf(0f)   // fraction of tile size
     var offY by mutableStateOf(0f)
     var rotation by mutableStateOf(0f)
+    var ratio = 1f  // image aspect (w/h), set once the photo loads
+
     fun reset() { scale = 1f; offX = 0f; offY = 0f; rotation = 0f }
+
+    /** Keep height >= tile height, and when level, snap edges flush - no black slivers. */
+    fun clamp() {
+        scale = scale.coerceIn(1f, 6f)
+        val level = rotation < 0.5f || rotation > 359.5f
+        if (level) {
+            val maxY = (scale - 1f) / 2f
+            offY = offY.coerceIn(-maxY, maxY)
+            val w = ratio * scale
+            offX = if (w <= 1f) 0f else offX.coerceIn(-(w - 1f) / 2f, (w - 1f) / 2f)
+        }
+    }
     /** Rotate about the tile centre: the pan offset swings with the image. */
     fun rotateBy(deg: Float) {
         val rad = Math.toRadians(deg.toDouble())
@@ -54,6 +68,7 @@ class TileState {
         val ny = (offX * sin + offY * cos).toFloat()
         offX = nx; offY = ny
         rotation = (((rotation + deg) % 360f) + 360f) % 360f
+        clamp()
     }
     fun straighten() { rotateBy(-rotation) }
 }
@@ -172,10 +187,11 @@ fun TileBox(modifier: Modifier, t: TileState, selected: Boolean,
                 detectTransformGestures { _, pan, zoom, rot ->
                     onSelect()
                     if (t.uri != null) {
-                        t.scale = (t.scale * zoom).coerceIn(0.3f, 6f)
+                        t.scale = t.scale * zoom
                         t.rotateBy(rot)
                         t.offX += pan.x / size.width
                         t.offY += pan.y / size.height
+                        t.clamp()
                     }
                 }
             }
@@ -204,6 +220,7 @@ fun TileBox(modifier: Modifier, t: TileState, selected: Boolean,
             } else {
                 androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
                     val ratio = intrinsic.width / intrinsic.height
+                    t.ratio = ratio
                     val tilePx = constraints.maxWidth.toFloat()
                     androidx.compose.foundation.Image(
                         painter, contentDescription = null,
