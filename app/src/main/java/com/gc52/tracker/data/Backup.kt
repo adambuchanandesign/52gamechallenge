@@ -92,7 +92,7 @@ object Backup {
                 playing.add(Playing(name = o.getString("name"), platform = o.getString("platform"),
                     started = o.strOrNull("started"), notes = o.strOrNull("notes"),
                     coverUrl = o.strOrNull("coverUrl"),
-                    igdbId = if (o.has("igdbId") && !o.isNull("igdbId")) o.getLong("igdbId") else null)))
+                    igdbId = if (o.has("igdbId") && !o.isNull("igdbId")) o.getLong("igdbId") else null))
             }
             val backlog = ArrayList<Backlog>()
             val ba = root.optJSONArray("backlog") ?: JSONArray()
@@ -101,7 +101,7 @@ object Backup {
                 backlog.add(Backlog(name = o.getString("name"), platform = o.getString("platform"),
                     added = o.strOrNull("added"), notes = o.strOrNull("notes"),
                     coverUrl = o.strOrNull("coverUrl"),
-                    igdbId = if (o.has("igdbId") && !o.isNull("igdbId")) o.getLong("igdbId") else null)))
+                    igdbId = if (o.has("igdbId") && !o.isNull("igdbId")) o.getLong("igdbId") else null))
             }
             val series = ArrayList<String>()
             val sa = root.optJSONArray("series") ?: JSONArray()
