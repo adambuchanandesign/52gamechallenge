@@ -45,7 +45,6 @@ class TileState {
     var offX by mutableStateOf(0f)   // fraction of tile size
     var offY by mutableStateOf(0f)
     var rotation by mutableStateOf(0f)
-    var fit by mutableStateOf(false) // fill the frame by default - no gaps; zoom/pan/rotate from there
     fun reset() { scale = 1f; offX = 0f; offY = 0f; rotation = 0f }
     /** Rotate about the tile centre: the pan offset swings with the image. */
     fun rotateBy(deg: Float) {
@@ -168,7 +167,7 @@ fun TileBox(modifier: Modifier, t: TileState, selected: Boolean,
         modifier
             .aspectRatio(1f)
             .clipToBounds()
-            .background(if (t.fit) Color.Black else Surface2)
+            .background(Color.Black)
             .pointerInput(t) {
                 detectTransformGestures { _, pan, zoom, rot ->
                     onSelect()
@@ -190,7 +189,7 @@ fun TileBox(modifier: Modifier, t: TileState, selected: Boolean,
         if (t.uri != null) {
             AsyncImage(
                 model = t.uri, contentDescription = null,
-                contentScale = if (t.fit) ContentScale.Fit else ContentScale.Crop,
+                contentScale = ContentScale.FillHeight,
                 modifier = Modifier.fillMaxSize().graphicsLayer {
                     scaleX = t.scale; scaleY = t.scale
                     rotationZ = t.rotation
@@ -243,13 +242,10 @@ fun renderCollage(ctx: android.content.Context, tiles: List<TileState>): Bitmap?
         val top = B + iy * (T + B)
         canvas.save()
         canvas.clipRect(left.toFloat(), top.toFloat(), (left + T).toFloat(), (top + T).toFloat())
-        if (t?.fit == true) canvas.drawColor(android.graphics.Color.BLACK)
+        canvas.drawColor(android.graphics.Color.BLACK)
         val cx = left + T / 2f
         val cy = top + T / 2f
-        val base = if (t?.fit == true)
-            minOf(T.toFloat() / bmp.width, T.toFloat() / bmp.height)
-        else
-            maxOf(T.toFloat() / bmp.width, T.toFloat() / bmp.height)
+        val base = T.toFloat() / bmp.height   // fill the tile height; width pans
         val s = base * (t?.scale ?: 1f)
         canvas.translate(cx + (t?.offX ?: 0f) * T, cy + (t?.offY ?: 0f) * T)
         canvas.rotate(t?.rotation ?: 0f)
