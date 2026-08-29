@@ -1,4 +1,4 @@
-# #52GameChallenge — Android tracker
+# #52GameChallenge — Android tracker (Claude AI)
 
 A personal, sideloaded Android app for the #52GameChallenge: beat a game a
 week, log it, collage it. Eleven years of a spreadsheet, now with a proper
