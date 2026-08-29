@@ -190,9 +190,18 @@ fun TileBox(modifier: Modifier, t: TileState, selected: Boolean,
             // The image node keeps the photo's REAL aspect ratio (height = tile height,
             // width whatever that implies) so nothing is pre-clipped to the square -
             // the tile's own clipToBounds is the only crop, and panning reaches everything.
-            val painter = coil.compose.rememberAsyncImagePainter(t.uri)
+            // Giving the request an explicit size makes Coil load immediately;
+            // a bare painter waits to be drawn first, and we wait for its size -> deadlock.
+            val painter = coil.compose.rememberAsyncImagePainter(
+                model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                    .data(t.uri).size(2048).build()
+            )
             val intrinsic = painter.intrinsicSize
-            if (intrinsic != androidx.compose.ui.geometry.Size.Unspecified && intrinsic.height > 0f) {
+            if (intrinsic == androidx.compose.ui.geometry.Size.Unspecified || intrinsic.height <= 0f) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = LogoBlueLight, modifier = Modifier.size(28.dp))
+                }
+            } else {
                 androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
                     val ratio = intrinsic.width / intrinsic.height
                     val tilePx = constraints.maxWidth.toFloat()
