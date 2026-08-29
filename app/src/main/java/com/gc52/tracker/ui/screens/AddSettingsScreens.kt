@@ -117,7 +117,9 @@ fun AddScreen(vm: AppViewModel, nav: NavHostController, playingId: Long = -1L) {
                 vm.addGame(name, platform, year.toInt(), date.trim().ifBlank { null }, notes, replay, picked) { id ->
                 }
                 if (playingId > 0) vm.consumePlaying(playingId)
-                nav.popBackStack()
+                // Go home with a clean stack: popping back would land on the
+                // now-consumed Playing item's page, which renders blank.
+                nav.navigate("home") { popUpTo("home") { inclusive = true } }
             },
             colors = ButtonDefaults.buttonColors(containerColor = LogoBlue),
             modifier = Modifier.fillMaxWidth()
