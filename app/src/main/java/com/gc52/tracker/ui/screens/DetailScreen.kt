@@ -132,9 +132,8 @@ fun DetailScreen(vm: AppViewModel, nav: NavHostController, id: Long) {
         if (editing) {
             Spacer(Modifier.height(14.dp))
             Column(Modifier.onGloballyPositioned { editFormY = it.positionInParent().y.toInt() }) {
-                EditForm(g) { updated -> vm.update(updated) { }; game = updated; editing = false }
-                TextButton(onClick = { nav.navigate("reorder/" + g.year) }) {
-                    Text("Change order within ${g.year}…", color = LogoBlueLight)
+                EditForm(g, onChangeOrder = { nav.navigate("reorder/" + g.year) }) { updated ->
+                    vm.update(updated) { }; game = updated; editing = false
                 }
             }
         }
@@ -144,6 +143,7 @@ fun DetailScreen(vm: AppViewModel, nav: NavHostController, id: Long) {
         com.gc52.tracker.IgdbAboutBlock(vm, g.name, g.igdbId)
         var refreshMsg by remember { mutableStateOf<String?>(null) }
         var showChooser by remember { mutableStateOf(false) }
+        var showIdEntry by remember { mutableStateOf(false) }
         val refreshScope = rememberCoroutineScope()
         Row(verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = {
@@ -155,7 +155,38 @@ fun DetailScreen(vm: AppViewModel, nav: NavHostController, id: Long) {
                 }
             }) { Text("Refresh IGDB data", color = Muted, fontSize = 14.sp) }
             TextButton(onClick = { showChooser = true }) { Text("Choose match…", color = Muted, fontSize = 14.sp) }
+            TextButton(onClick = { showIdEntry = true }) { Text("Enter ID…", color = Muted, fontSize = 14.sp) }
             refreshMsg?.let { Text(it, color = if (it.startsWith("IGDB")) Good else Muted, fontSize = 13.sp) }
+        }
+        if (showIdEntry) {
+            var idText by remember { mutableStateOf("") }
+            AlertDialog(
+                onDismissRequest = { showIdEntry = false },
+                title = { Text("Enter IGDB ID") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("On igdb.com, the game page shows its IGDB ID (also visible in some URLs).",
+                            fontSize = 13.sp)
+                        OutlinedTextField(value = idText,
+                            onValueChange = { idText = it.filter(Char::isDigit).take(9) },
+                            label = { Text("Numeric ID") }, singleLine = true)
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        idText.toLongOrNull()?.let { chosen ->
+                            showIdEntry = false
+                            refreshMsg = "Applying…"
+                            pageScope.launch {
+                                val u = vm.applyIgdbChoice(g, chosen)
+                                if (u != null) { game = u; refreshMsg = "IGDB match updated ✓" }
+                                else refreshMsg = "No IGDB entry with that ID"
+                            }
+                        }
+                    }) { Text("Use this ID") }
+                },
+                dismissButton = { TextButton(onClick = { showIdEntry = false }) { Text("Cancel") } }
+            )
         }
         if (showChooser) {
             var hits by remember { mutableStateOf<List<com.gc52.tracker.data.Igdb.Hit>?>(null) }
@@ -211,7 +242,7 @@ fun DetailScreen(vm: AppViewModel, nav: NavHostController, id: Long) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
             title = { Text("Delete entry?") },
-            text = { Text("Removes ${g.name} from the list. The collage image file is not touched.") },
+            text = { Text("Removes ${g.name} from the list. The collage image file is not touched.\n\nNote: this leaves a gap in the ${g.year} numbering — fix it any time via Change order, which renumbers the year 1..N.") },
             confirmButton = {
                 TextButton(onClick = { vm.delete(g) { }; nav.popBackStack() }) { Text("Delete", color = Warn) }
             },
@@ -230,7 +261,7 @@ fun InfoLine(label: String, value: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditForm(g: Game, onSave: (Game) -> Unit) {
+fun EditForm(g: Game, onChangeOrder: (() -> Unit)? = null, onSave: (Game) -> Unit) {
     var name by remember { mutableStateOf(g.name) }
     var platform by remember { mutableStateOf(g.platform) }
     var date by remember { mutableStateOf(g.date ?: "") }
@@ -249,17 +280,27 @@ fun EditForm(g: Game, onSave: (Game) -> Unit) {
             Checkbox(checked = replay, onCheckedChange = { replay = it })
             Text("Replay (beaten before)", color = Cream, fontSize = 16.sp)
         }
-        Button(
-            onClick = {
-                onSave(g.copy(
-                    name = name.trim(), platform = platform.trim(),
-                    date = date.trim().ifBlank { null },
-                    imageFile = image.trim().ifBlank { null },
-                    notes = notes.trim().ifBlank { null }, replay = replay
-                ))
-            },
-            colors = ButtonDefaults.buttonColors(containerColor = LogoBlue)
-        ) { Text("Save") }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Button(
+                onClick = {
+                    onSave(g.copy(
+                        name = name.trim(), platform = platform.trim(),
+                        date = date.trim().ifBlank { null },
+                        imageFile = image.trim().ifBlank { null },
+                        notes = notes.trim().ifBlank { null }, replay = replay
+                    ))
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = LogoBlue),
+                modifier = Modifier.weight(1f)
+            ) { Text("Save") }
+            onChangeOrder?.let {
+                Button(
+                    onClick = it,
+                    colors = ButtonDefaults.buttonColors(containerColor = LogoBlue),
+                    modifier = Modifier.weight(1f)
+                ) { Text("Change order") }
+            }
+        }
     }
 }
 

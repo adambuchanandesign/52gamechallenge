@@ -124,6 +124,9 @@ fun BacklogDetailScreen(vm: AppViewModel, nav: NavHostController, id: Long) {
             Text("Remove from backlog", color = Warn)
         }
         IgdbAboutBlock(vm, b.name, b.igdbId)
+        com.gc52.tracker.IgdbFixRow(vm, b.name) { hitId ->
+            vm.fixIgdbBacklog(b, hitId)?.also { item = it } != null
+        }
         Spacer(Modifier.height(20.dp))
     }
 
@@ -146,6 +149,7 @@ fun RandomScreen(vm: AppViewModel, nav: NavHostController) {
     var genre by remember { mutableStateOf<String?>(null) }
     var era by remember { mutableStateOf<String?>(null) }
     var type by remember { mutableStateOf<String?>(null) }
+    var console by remember { mutableStateOf<String?>(null) }
     var result by remember { mutableStateOf<Igdb.Details?>(null) }
     var beaten by remember { mutableStateOf<com.gc52.tracker.data.Game?>(null) }
     var spinning by remember { mutableStateOf(false) }
@@ -158,7 +162,7 @@ fun RandomScreen(vm: AppViewModel, nav: NavHostController) {
         spinning = true; error = null
         scope.launch {
             val d = vm.randomGame(genre?.let { Igdb.GENRES[it] }, era?.let { Igdb.ERAS[it] },
-                type?.let { Igdb.TYPES[it] })
+                console?.let { c -> Igdb.CONSOLES[c]?.let { listOf(it) } } ?: type?.let { Igdb.TYPES[it] })
             if (d == null) error = "Nothing came back — check IGDB credentials or loosen the filters"
             else { result = d; beaten = vm.beatenMatch(d.name); filtersOpen = false }
             spinning = false
@@ -186,7 +190,8 @@ fun RandomScreen(vm: AppViewModel, nav: NavHostController) {
                 H2("Filters")
                 if (!filtersOpen) {
                     Text(
-                        listOfNotNull(type, genre, era).ifEmpty { listOf("Anything goes") }.joinToString(" · "),
+                        listOfNotNull(console, if (console == null) type else null, genre, era)
+                            .ifEmpty { listOf("Anything goes") }.joinToString(" · "),
                         color = Muted, fontSize = 13.sp
                     )
                 }
@@ -194,36 +199,35 @@ fun RandomScreen(vm: AppViewModel, nav: NavHostController) {
             Text(if (filtersOpen) "▲" else "▼", color = Muted, fontSize = 14.sp)
         }
         if (filtersOpen) {
-            Text("Type", color = Muted, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Igdb.TYPES.keys.forEach { ty ->
-                    FilterChip(selected = type == ty, onClick = { type = if (type == ty) null else ty },
-                        label = { Text(ty, fontSize = 13.sp) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = LogoBlue, selectedLabelColor = Cream,
-                            containerColor = Surface1, labelColor = Muted))
+            @Composable
+            fun section(title: String, chosen: String?, options: Collection<String>,
+                        onPick: (String?) -> Unit) {
+                var open by remember(title) { mutableStateOf(false) }
+                Row(
+                    Modifier.fillMaxWidth().clickable { open = !open }.padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(title, color = Muted, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    if (chosen != null) Text("  ·  $chosen", color = LogoBlueLight, fontSize = 13.sp)
+                    Spacer(Modifier.weight(1f))
+                    Text(if (open) "▾" else "▸", color = Muted, fontSize = 14.sp)
+                }
+                if (open) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    options.forEach { o ->
+                        FilterChip(selected = chosen == o,
+                            onClick = { onPick(if (chosen == o) null else o) },
+                            label = { Text(o, fontSize = 13.sp) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = LogoBlue, selectedLabelColor = Cream,
+                                containerColor = Surface1, labelColor = Muted))
+                    }
                 }
             }
-            Text("Genre", color = Muted, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Igdb.GENRES.keys.forEach { g ->
-                    FilterChip(selected = genre == g, onClick = { genre = if (genre == g) null else g },
-                        label = { Text(g, fontSize = 13.sp) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = LogoBlue, selectedLabelColor = Cream,
-                            containerColor = Surface1, labelColor = Muted))
-                }
-            }
-            Text("Era", color = Muted, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Igdb.ERAS.keys.forEach { e ->
-                    FilterChip(selected = era == e, onClick = { era = if (era == e) null else e },
-                        label = { Text(e, fontSize = 13.sp) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = LogoBlue, selectedLabelColor = Cream,
-                            containerColor = Surface1, labelColor = Muted))
-                }
-            }
+            section("Type", type, Igdb.TYPES.keys) { type = it; if (it != null) console = null }
+            section("Console", console, Igdb.CONSOLES.keys) { console = it; if (it != null) type = null }
+            section("Genre", genre, Igdb.GENRES.keys) { genre = it }
+            section("Era", era, Igdb.ERAS.keys) { era = it }
         }
         Button(
             enabled = enabled && !spinning, onClick = { spin() },
@@ -268,28 +272,16 @@ fun RandomScreen(vm: AppViewModel, nav: NavHostController) {
                 }
                 d.summary?.let { Text(it, color = Cream, fontSize = 14.sp, maxLines = 6) }
                 BigLinkButtons(d.name)
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Button(
-                        onClick = {
-                            vm.pendingNp = AppViewModel.PendingNp(d.name,
-                                d.platforms.map { Igdb.mapPlatform(it) }.distinct(),
-                                d.coverBig, target = "playing", igdbId = d.igdbId)
-                            nav.navigate("npadd")
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = LogoBlue),
-                        modifier = Modifier.weight(1f)
-                    ) { Text("+ Now playing", fontSize = 14.sp) }
-                    Button(
-                        onClick = {
-                            vm.pendingNp = AppViewModel.PendingNp(d.name,
-                                d.platforms.map { Igdb.mapPlatform(it) }.distinct(),
-                                d.coverBig, target = "backlog", igdbId = d.igdbId)
-                            nav.navigate("npadd")
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = LogoBlue),
-                        modifier = Modifier.weight(1f)
-                    ) { Text("+ Backlog", fontSize = 14.sp) }
-                }
+                Button(
+                    onClick = {
+                        vm.pendingNp = AppViewModel.PendingNp(d.name,
+                            d.platforms.map { Igdb.mapPlatform(it) }.distinct(),
+                            d.coverBig, igdbId = d.igdbId)
+                        nav.navigate("npadd")
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = LogoBlue),
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Add game", fontWeight = FontWeight.Bold, fontSize = 14.sp) }
             }
             Button(
                 enabled = enabled && !spinning, onClick = { spin() },

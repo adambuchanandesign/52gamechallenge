@@ -96,7 +96,7 @@ fun GamesScreen(vm: AppViewModel, nav: NavHostController) {
                 games.forEach { g ->
                     if (dividers && g.year != lastYear) {
                         lastYear = g.year
-                        item(key = "hd${g.year}") { YearDivider(g.year) }
+                        item(key = "hd${g.year}") { YearDivider(g.year, onEdit = { nav.navigate("reorder/${g.year}") }) }
                     }
                     item(key = g.id) { GameRow(g) { nav.navigate("detail/${g.id}") } }
                 }
@@ -108,7 +108,7 @@ fun GamesScreen(vm: AppViewModel, nav: NavHostController) {
                 games.forEach { g ->
                     if (dividers && g.year != lastYear) {
                         lastYear = g.year
-                        item(key = "hd${g.year}") { YearDivider(g.year) }
+                        item(key = "hd${g.year}") { YearDivider(g.year, onEdit = { nav.navigate("reorder/${g.year}") }) }
                     }
                     item(key = g.id) { GameLargeCell(g) { nav.navigate("detail/${g.id}") } }
                 }
@@ -125,7 +125,7 @@ fun GamesScreen(vm: AppViewModel, nav: NavHostController) {
                 games.forEach { g ->
                     if (dividers && g.year != lastYear) {
                         lastYear = g.year
-                        item(key = "hd${g.year}", span = { GridItemSpan(maxLineSpan) }) { YearDivider(g.year) }
+                        item(key = "hd${g.year}", span = { GridItemSpan(maxLineSpan) }) { YearDivider(g.year, onEdit = { nav.navigate("reorder/${g.year}") }) }
                     }
                     item(key = g.id) { GameGridCell(g) { nav.navigate("detail/${g.id}") } }
                 }

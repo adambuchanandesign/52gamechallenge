@@ -45,9 +45,10 @@ fun AddScreen(vm: AppViewModel, nav: NavHostController, playingId: Long = -1L) {
     }
 
     var carriedIgdbId by remember { mutableStateOf<Long?>(null) }
+    var prefilledName by remember { mutableStateOf("") }
     LaunchedEffect(Unit) {
         if (playingId <= 0) vm.pendingNp?.let { pn ->
-            name = pn.name
+            name = pn.name; prefilledName = pn.name
             if (pn.platforms.size == 1) platform = pn.platforms[0]
             carriedIgdbId = pn.igdbId
             vm.pendingNp = null
@@ -55,7 +56,8 @@ fun AddScreen(vm: AppViewModel, nav: NavHostController, playingId: Long = -1L) {
     }
     LaunchedEffect(playingId) {
         if (playingId > 0) vm.playingItem(playingId)?.let { p ->
-            name = p.name; platform = p.platform; if (!p.notes.isNullOrBlank()) notes = p.notes!!
+            name = p.name; prefilledName = p.name
+            platform = p.platform; if (!p.notes.isNullOrBlank()) notes = p.notes!!
             carriedIgdbId = p.igdbId
         }
     }
@@ -74,7 +76,7 @@ fun AddScreen(vm: AppViewModel, nav: NavHostController, playingId: Long = -1L) {
         var pickedName by remember { mutableStateOf("") }
         val igdbOn by vm.igdbEnabled.collectAsState()
         LaunchedEffect(name) {
-            if (!igdbOn || name.trim().length < 3 || name == pickedName) { igdbHits = emptyList(); return@LaunchedEffect }
+            if (!igdbOn || name.trim().length < 3 || name == pickedName || name == prefilledName) { igdbHits = emptyList(); return@LaunchedEffect }
             kotlinx.coroutines.delay(400)
             igdbHits = vm.searchIgdbFor(name) ?: emptyList()
         }
@@ -209,6 +211,7 @@ fun AddScreen(vm: AppViewModel, nav: NavHostController, playingId: Long = -1L) {
                 vm.addGame(name, platform, year.toInt(), date.trim().ifBlank { null }, notes, replay, picked, carriedIgdbId) { id ->
                 }
                 if (playingId > 0) vm.consumePlaying(playingId)
+                vm.query.value = ""
                 // Go home with a clean stack: popping back would land on the
                 // now-consumed Playing item's page, which renders blank.
                 nav.navigate("home") { popUpTo("home") { inclusive = true } }

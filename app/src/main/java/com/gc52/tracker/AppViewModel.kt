@@ -430,6 +430,37 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             } ?: raw
         }
 
+    /** Refresh or re-point a Now Playing item's IGDB identity/cover.
+     *  hitId null = refresh (by stored id, else best name match). Returns updated item. */
+    suspend fun fixIgdbPlaying(p: Playing, hitId: Long? = null): Playing? {
+        if (!igdbEnabled.value) return null
+        val d = kotlinx.coroutines.withContext(Dispatchers.IO) {
+            hitId?.let { Igdb.detailsById(getApplication(), it) }
+                ?: p.igdbId?.let { Igdb.detailsById(getApplication(), it) }
+                ?: Igdb.details(getApplication(), p.name)
+        } ?: return null
+        val updated = p.copy(igdbId = hitId ?: (d.igdbId ?: p.igdbId),
+            coverUrl = d.coverBig ?: p.coverUrl)
+        kotlinx.coroutines.withContext(Dispatchers.IO) { dao.updatePlaying(updated) }
+        detailsCache.remove(p.name); detailsCache.remove("#${p.igdbId}"); detailsCache.remove("#${updated.igdbId}")
+        return updated
+    }
+
+    /** Same for a Backlog item. */
+    suspend fun fixIgdbBacklog(b: Backlog, hitId: Long? = null): Backlog? {
+        if (!igdbEnabled.value) return null
+        val d = kotlinx.coroutines.withContext(Dispatchers.IO) {
+            hitId?.let { Igdb.detailsById(getApplication(), it) }
+                ?: b.igdbId?.let { Igdb.detailsById(getApplication(), it) }
+                ?: Igdb.details(getApplication(), b.name)
+        } ?: return null
+        val updated = b.copy(igdbId = hitId ?: (d.igdbId ?: b.igdbId),
+            coverUrl = d.coverBig ?: b.coverUrl)
+        kotlinx.coroutines.withContext(Dispatchers.IO) { dao.updateBacklog(updated) }
+        detailsCache.remove(b.name); detailsCache.remove("#${b.igdbId}"); detailsCache.remove("#${updated.igdbId}")
+        return updated
+    }
+
     /** Force re-fetch IGDB data for one game, overwriting whatever is stored. */
     suspend fun refreshIgdb(g: Game): Game? {
         if (!igdbEnabled.value) return null

@@ -104,6 +104,9 @@ fun PlayingDetailScreen(vm: AppViewModel, nav: NavHostController, id: Long) {
         ) { Text("Remove from Now playing", color = Warn) }
 
         com.gc52.tracker.IgdbAboutBlock(vm, p.name, p.igdbId)
+        com.gc52.tracker.IgdbFixRow(vm, p.name) { hitId ->
+            vm.fixIgdbPlaying(p, hitId)?.also { item = it } != null
+        }
         Spacer(Modifier.height(20.dp))
     }
 

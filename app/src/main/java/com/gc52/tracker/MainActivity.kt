@@ -8,12 +8,15 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
@@ -308,14 +311,21 @@ fun GameRow(g: Game, onClick: () -> Unit) {
 }
 
 @Composable
-fun YearDivider(year: Int) {
+fun YearDivider(year: Int, onEdit: (() -> Unit)? = null) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)
     ) {
         HorizontalDivider(modifier = Modifier.weight(1f), color = Muted.copy(alpha = 0.25f))
         Text("$year", color = Cream, fontWeight = FontWeight.Bold, fontSize = 19.sp,
-            modifier = Modifier.padding(horizontal = 12.dp))
+            modifier = Modifier.padding(start = 12.dp, end = if (onEdit == null) 12.dp else 4.dp))
+        onEdit?.let {
+            Icon(
+                androidx.compose.material.icons.Icons.Filled.Edit, "Reorder $year", tint = Muted,
+                modifier = Modifier.size(18.dp).clickable(onClick = it)
+            )
+            Spacer(Modifier.width(12.dp))
+        }
         HorizontalDivider(modifier = Modifier.weight(1f), color = Muted.copy(alpha = 0.25f))
     }
 }
@@ -461,6 +471,87 @@ fun MiniCard(modifier: Modifier, name: String, platform: String, coverUrl: Strin
 }
 
 /** IGDB "About" panel used on beaten / now playing / backlog item pages. */
+/** "Refresh IGDB data · Choose match… · Enter ID…" row with its dialogs.
+ *  apply(null) = refresh; apply(id) = use that exact IGDB entry. */
+@Composable
+fun IgdbFixRow(vm: AppViewModel, name: String, apply: suspend (Long?) -> Boolean) {
+    var msg by remember { mutableStateOf<String?>(null) }
+    var chooser by remember { mutableStateOf(false) }
+    var idEntry by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    fun run(hitId: Long?) {
+        msg = "Working…"
+        scope.launch { msg = if (apply(hitId)) "Updated ✓" else "No match found" }
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        TextButton(onClick = { run(null) }) { Text("Refresh IGDB", color = Muted, fontSize = 14.sp) }
+        TextButton(onClick = { chooser = true }) { Text("Choose match…", color = Muted, fontSize = 14.sp) }
+        TextButton(onClick = { idEntry = true }) { Text("Enter ID…", color = Muted, fontSize = 14.sp) }
+        msg?.let { Text(it, color = if (it.startsWith("Updated")) Good else Muted, fontSize = 13.sp) }
+    }
+    if (chooser) {
+        var hits by remember { mutableStateOf<List<com.gc52.tracker.data.Igdb.Hit>?>(null) }
+        LaunchedEffect(Unit) { hits = vm.searchIgdbFor(name) }
+        AlertDialog(
+            onDismissRequest = { chooser = false },
+            title = { Text("Which game is this?") },
+            text = {
+                Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    when {
+                        hits == null -> Text("Searching IGDB…")
+                        hits!!.isEmpty() -> Text("No matches found for this name.")
+                        else -> hits!!.forEach { h ->
+                            Row(
+                                Modifier.fillMaxWidth()
+                                    .clickable { chooser = false; run(h.id) }
+                                    .padding(vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (h.coverUrl != null) {
+                                    coil.compose.AsyncImage(model = h.coverUrl, contentDescription = null,
+                                        modifier = Modifier.size(width = 38.dp, height = 50.dp)
+                                            .clip(RoundedCornerShape(4.dp)))
+                                    Spacer(Modifier.width(10.dp))
+                                }
+                                Column {
+                                    Text(h.name + (h.year?.let { " ($it)" } ?: ""), fontSize = 15.sp)
+                                    if (h.platforms.isNotEmpty())
+                                        Text(h.platforms.joinToString(" · ") { com.gc52.tracker.data.Igdb.mapPlatform(it) },
+                                            fontSize = 12.sp, color = Muted, maxLines = 2)
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { chooser = false }) { Text("Cancel") } }
+        )
+    }
+    if (idEntry) {
+        var idText by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { idEntry = false },
+            title = { Text("Enter IGDB ID") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("On igdb.com, the game page shows its IGDB ID (also visible in some URLs).",
+                        fontSize = 13.sp)
+                    OutlinedTextField(value = idText,
+                        onValueChange = { idText = it.filter(Char::isDigit).take(9) },
+                        label = { Text("Numeric ID") }, singleLine = true)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    idText.toLongOrNull()?.let { idEntry = false; run(it) }
+                }) { Text("Use this ID") }
+            },
+            dismissButton = { TextButton(onClick = { idEntry = false }) { Text("Cancel") } }
+        )
+    }
+}
+
 @Composable
 fun IgdbAboutBlock(vm: AppViewModel, name: String, igdbId: Long? = null) {
     var info by remember(name, igdbId) { mutableStateOf<com.gc52.tracker.data.Igdb.Details?>(null) }

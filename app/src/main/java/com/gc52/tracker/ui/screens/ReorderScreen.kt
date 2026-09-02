@@ -31,6 +31,7 @@ fun ReorderScreen(vm: AppViewModel, nav: NavHostController, year: Int) {
     var jumpFor by remember { mutableStateOf<Int?>(null) }   // index whose position is being edited
     val scope = rememberCoroutineScope()
     LaunchedEffect(year) { order = vm.gamesOfYear(year) }
+    val hasGaps = order.mapIndexed { i, g -> g.seq != i + 1 }.any { it }
 
     fun move(from: Int, to: Int) {
         if (to < 0 || to >= order.size || from == to) return
@@ -50,6 +51,9 @@ fun ReorderScreen(vm: AppViewModel, nav: NavHostController, year: Int) {
                 H1("Reorder $year")
                 Text("Arrows nudge; tap a number to jump it to a position.",
                     color = Muted, fontSize = 13.sp)
+                if (hasGaps && !dirty) Text(
+                    "Numbering has gaps (deleted entries) — Save will renumber 1..${order.size}.",
+                    color = Warn, fontSize = 13.sp)
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -59,11 +63,13 @@ fun ReorderScreen(vm: AppViewModel, nav: NavHostController, year: Int) {
                     Modifier.fillMaxWidth().gradientCard().padding(horizontal = 10.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        "%02d".format(i + 1), color = LogoBlueLight, fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
-                        modifier = Modifier.clickable { jumpFor = i }.padding(6.dp)
-                    )
+                    Column(Modifier.clickable { jumpFor = i }.padding(6.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("%02d".format(i + 1), color = LogoBlueLight,
+                            fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        if (g.seq != i + 1)
+                            Text("was ${g.seq}", color = Warn, fontSize = 10.sp)
+                    }
                     Spacer(Modifier.width(8.dp))
                     PlatformIcon(g.platform, 28)
                     Spacer(Modifier.width(8.dp))
@@ -86,7 +92,7 @@ fun ReorderScreen(vm: AppViewModel, nav: NavHostController, year: Int) {
         }
         status?.let { Text(it, color = if (it.startsWith("Saved")) Good else Warn, fontSize = 14.sp) }
         Button(
-            enabled = dirty && !saving,
+            enabled = (dirty || hasGaps) && !saving,
             onClick = {
                 saving = true; status = "Renumbering and renaming images…"
                 scope.launch {

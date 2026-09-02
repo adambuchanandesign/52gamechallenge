@@ -120,7 +120,9 @@ fun NpAddScreen(vm: AppViewModel, nav: NavHostController) {
                     // hand the details to the full beaten form (date, collage, replay...)
                     vm.pendingNp = AppViewModel.PendingNp(name, listOf(platform), pending?.coverUrl,
                         igdbId = pending?.igdbId)
-                    nav.navigate("add")
+                    vm.query.value = ""
+                    // clear the search/choice pages off the stack: back = Home
+                    nav.navigate("add") { popUpTo("home"); launchSingleTop = true }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = LogoBlue),
                 modifier = Modifier.weight(1f)

@@ -115,6 +115,23 @@ object Igdb {
         "PC" to listOf(6, 13, 14, 3, 16, 15, 26, 25, 27, 63, 75, 121, 69, 149)
     )
 
+    /** Individual consoles for the random picker's Console filter. */
+    val CONSOLES: LinkedHashMap<String, Int> = linkedMapOf(
+        "NES" to 18, "SNES" to 19, "Nintendo 64" to 4, "GameCube" to 21, "Wii" to 5,
+        "Wii U" to 41, "Switch" to 130, "Game Boy" to 33, "Game Boy Color" to 22,
+        "Game Boy Advance" to 24, "Nintendo DS" to 20, "Nintendo 3DS" to 37,
+        "Famicom Disk System" to 51, "Virtual Boy" to 87,
+        "PlayStation" to 7, "PlayStation 2" to 8, "PlayStation 3" to 9, "PlayStation 4" to 48,
+        "PlayStation 5" to 167, "PSP" to 38, "PS Vita" to 46,
+        "Xbox" to 11, "Xbox 360" to 12, "Xbox One" to 49, "Xbox Series" to 169,
+        "Master System" to 64, "Mega Drive" to 29, "Game Gear" to 35, "Sega CD" to 78,
+        "32X" to 30, "Saturn" to 32, "Dreamcast" to 23,
+        "PC Engine" to 86, "PC Engine CD" to 150, "Neo Geo" to 80, "3DO" to 50,
+        "Atari 2600" to 59, "Atari 7800" to 60, "Jaguar" to 62, "Lynx" to 61,
+        "WonderSwan" to 57, "Amiga" to 16, "C64" to 15, "ZX Spectrum" to 26,
+        "Amstrad CPC" to 25, "MSX" to 27, "DOS" to 13, "PC" to 6, "Arcade" to 52
+    )
+
     val ERAS = linkedMapOf(
         "1980s" to (1980 to 1989), "1990s" to (1990 to 1999), "2000s" to (2000 to 2009),
         "2010s" to (2010 to 2019), "2020s" to (2020 to 2029)
@@ -241,20 +258,38 @@ object Igdb {
         "neo geo" to "neo geo", "neogeo" to "neo geo",
         "pc engine" to "pc engine", "pce" to "pc engine", "turbografx" to "turbografx",
         "wonderswan" to "wonderswan", "3do" to "3do", "x68000" to "x68000",
-        "lynx" to "lynx", "arcade" to "arcade", "bbc" to "bbc", "atari st" to "atari st"
+        "lynx" to "lynx", "arcade" to "arcade", "bbc" to "bbc", "atari st" to "atari st",
+        // generic family names last, so specific phrases win first
+        "commodore" to "commodore", "sega" to "sega", "nintendo" to "nintendo",
+        "atari" to "atari", "sinclair" to "sinclair", "amstrad" to "amstrad"
     )
 
     data class ParsedQuery(val name: String, val platformNeedle: String?)
 
-    /** Pulls a trailing/embedded platform hint out of a search query. */
+    /** Pulls a TRAILING platform hint out of a search query.
+     *  Suffix-only, so titles like "Sega Rally" or "Nintendo Land" are never mangled;
+     *  a partial last word ("comm", "spect", "playst") matches by alias prefix. */
     fun parseQuery(raw: String): ParsedQuery {
-        val norm = " " + raw.lowercase().replace(Regex("[^a-z0-9 ]"), " ")
-            .replace(Regex(" +"), " ").trim() + " "
+        val norm = raw.lowercase().replace(Regex("[^a-z0-9 ]"), " ")
+            .replace(Regex(" +"), " ").trim()
+        // Step 1: full alias phrase at the end of the query
         for ((phrase, needle) in PLATFORM_HINTS) {
-            val token = " $phrase "
-            if (norm.contains(token)) {
-                val cleaned = norm.replace(token, " ").trim()
+            if (norm.endsWith(" $phrase")) {
+                val cleaned = norm.removeSuffix(" $phrase").trim()
                 if (cleaned.isNotBlank()) return ParsedQuery(cleaned, needle)
+            }
+        }
+        // Step 2: unfinished last word that prefixes an alias ("paperboy comm…")
+        val lastSpace = norm.lastIndexOf(' ')
+        if (lastSpace > 0) {
+            val tail = norm.substring(lastSpace + 1)
+            if (tail.length >= 3) {
+                for ((phrase, needle) in PLATFORM_HINTS) {
+                    if (phrase.startsWith(tail) || phrase.replace(" ", "").startsWith(tail)) {
+                        val cleaned = norm.substring(0, lastSpace).trim()
+                        if (cleaned.isNotBlank()) return ParsedQuery(cleaned, needle)
+                    }
+                }
             }
         }
         return ParsedQuery(raw.trim(), null)

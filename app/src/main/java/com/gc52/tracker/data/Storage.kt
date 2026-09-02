@@ -63,10 +63,26 @@ object Storage {
         else -> "image/jpeg"
     }
 
+    private val dirLock = Any()
+    private val dirCache = HashMap<String, DocumentFile>()
+    private var dirCacheTree: String? = null
+
     private fun dir(ctx: Context, name: String): DocumentFile? {
         val tree = Prefs.treeUri(ctx) ?: return null
-        val root = DocumentFile.fromTreeUri(ctx, tree) ?: return null
-        return root.findFile(name)?.takeIf { it.isDirectory } ?: root.createDirectory(name)
+        synchronized(dirLock) {
+            // cache is per chosen folder; a folder switch clears it
+            if (dirCacheTree != tree.toString()) { dirCache.clear(); dirCacheTree = tree.toString() }
+            dirCache[name]?.let { if (it.exists()) return it else dirCache.remove(name) }
+            val root = DocumentFile.fromTreeUri(ctx, tree) ?: return null
+            // list-based, case-tolerant match: findFile misbehaves on some providers,
+            // and unsynchronized find-then-create races into "exports (1)" duplicates
+            val found = root.listFiles().firstOrNull {
+                it.isDirectory && it.name?.equals(name, ignoreCase = true) == true
+            }
+            val d = found ?: root.createDirectory(name)
+            if (d != null) dirCache[name] = d
+            return d
+        }
     }
 
     /** Copies a picked gallery image into <folder>/<year>/<fileName>. Returns true on success. */
