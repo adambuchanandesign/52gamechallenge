@@ -49,7 +49,7 @@ fun NpAddScreen(vm: AppViewModel, nav: NavHostController) {
             IconButton(onClick = { nav.popBackStack() }) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Muted)
             }
-            H1(if (pending?.target == "backlog") "Add to Backlog" else "Add to Now playing")
+            H1("Add game")
         }
 
         pending?.coverUrl?.let { cover ->
@@ -106,21 +106,44 @@ fun NpAddScreen(vm: AppViewModel, nav: NavHostController) {
 
         Field("Notes (where you're up to)", notes) { notes = it }
 
-        Button(
-            enabled = name.isNotBlank() && platform.isNotBlank(),
-            onClick = {
-                if (pending?.target == "backlog") vm.addBacklog(name, platform, notes, pending.coverUrl, pending.igdbId)
-                else vm.addPlaying(name, platform, notes, pending?.coverUrl, pending?.igdbId)
-                val dest = if (pending?.target == "backlog") "backlog" else "playing"
-                vm.pendingNp = null
-                vm.query.value = ""
-                nav.navigate(dest) {
-                    popUpTo("home"); launchSingleTop = true
-                }
-            },
-            colors = ButtonDefaults.buttonColors(containerColor = LogoBlue),
-            modifier = Modifier.fillMaxWidth()
-        ) { Text(if (pending?.target == "backlog") "Add to backlog" else "Start playing", fontWeight = FontWeight.Bold) }
+        Text("Where does it go?", color = Muted, fontSize = 14.sp)
+        val ready = name.isNotBlank() && platform.isNotBlank()
+        fun finish(dest: String) {
+            vm.pendingNp = null
+            vm.query.value = ""
+            nav.navigate(dest) { popUpTo("home"); launchSingleTop = true }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+            Button(
+                enabled = ready,
+                onClick = {
+                    // hand the details to the full beaten form (date, collage, replay...)
+                    vm.pendingNp = AppViewModel.PendingNp(name, listOf(platform), pending?.coverUrl,
+                        igdbId = pending?.igdbId)
+                    nav.navigate("add")
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = LogoBlue),
+                modifier = Modifier.weight(1f)
+            ) { Text("Beaten it", fontWeight = FontWeight.Bold, fontSize = 14.sp) }
+            Button(
+                enabled = ready,
+                onClick = {
+                    vm.addPlaying(name, platform, notes, pending?.coverUrl, pending?.igdbId)
+                    finish("playing")
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = LogoBlue),
+                modifier = Modifier.weight(1f)
+            ) { Text("Now playing", fontSize = 14.sp) }
+            Button(
+                enabled = ready,
+                onClick = {
+                    vm.addBacklog(name, platform, notes, pending?.coverUrl, pending?.igdbId)
+                    finish("backlog")
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = LogoBlue),
+                modifier = Modifier.weight(1f)
+            ) { Text("Backlog", fontSize = 14.sp) }
+        }
         Spacer(Modifier.height(20.dp))
     }
 }

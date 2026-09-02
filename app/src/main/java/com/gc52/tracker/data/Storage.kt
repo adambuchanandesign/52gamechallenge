@@ -134,6 +134,16 @@ object Storage {
         } catch (e: Exception) { }
     }
 
+    /** Renames a file inside <folder>/<year>/. */
+    fun renameInYear(ctx: Context, year: Int, oldName: String, newName: String): Boolean {
+        return try {
+            if (oldName == newName) return true
+            val y = dir(ctx, year.toString()) ?: return false
+            val f = y.findFile(oldName) ?: return false
+            f.renameTo(newName)
+        } catch (e: Exception) { false }
+    }
+
     /** Moves <folder>/<year>/<fileName> into <folder>/archive/ (copy + delete). */
     fun archiveImage(ctx: Context, year: Int, fileName: String): Boolean {
         return try {
@@ -283,7 +293,21 @@ object PlatformIcons {
         "3DO" to "panasonic-3do",
         "Nintendo Wii" to "nintendo-wii",
         "BBC Micro" to "bbc-micro",
-        "Amstrad CPC" to "amstrad-cpc"
+        "Amstrad CPC" to "amstrad-cpc",
+        // modern + requested additions
+        "Xbox One" to "xbox-one",
+        "Microsoft Xbox One" to "xbox-one",
+        "Xbox Series X" to "xbox-series-x",
+        "Xbox Series S" to "xbox-series-x",
+        "Xbox Series X|S" to "xbox-series-x",
+        "Microsoft Xbox Series X" to "xbox-series-x",
+        "Sony PlayStation 5" to "sony-playstation-5",
+        "PlayStation 5" to "sony-playstation-5",
+        "Nintendo Switch 2" to "nintendo-switch-2",
+        "Nintendo Famicom" to "nintendo-famicom",
+        "Famicom" to "nintendo-famicom",
+        "ZX Spectrum Next" to "zx-spectrum-next",
+        "Sinclair ZX Spectrum Next" to "zx-spectrum-next"
     )
 
     fun slug(platform: String): String =

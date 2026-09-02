@@ -32,8 +32,8 @@ import java.time.format.DateTimeFormatter
 fun AddScreen(vm: AppViewModel, nav: NavHostController, playingId: Long = -1L) {
     var name by remember { mutableStateOf("") }
     var platform by remember { mutableStateOf("") }
-    var year by remember { mutableStateOf(LocalDate.now().year.toString()) }
     var date by remember { mutableStateOf(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))) }
+    val year = date.take(4)  // beaten-year comes straight from the date
     var notes by remember { mutableStateOf("") }
     var replay by remember { mutableStateOf(false) }
     var picked by remember { mutableStateOf<Uri?>(null) }
@@ -45,6 +45,14 @@ fun AddScreen(vm: AppViewModel, nav: NavHostController, playingId: Long = -1L) {
     }
 
     var carriedIgdbId by remember { mutableStateOf<Long?>(null) }
+    LaunchedEffect(Unit) {
+        if (playingId <= 0) vm.pendingNp?.let { pn ->
+            name = pn.name
+            if (pn.platforms.size == 1) platform = pn.platforms[0]
+            carriedIgdbId = pn.igdbId
+            vm.pendingNp = null
+        }
+    }
     LaunchedEffect(playingId) {
         if (playingId > 0) vm.playingItem(playingId)?.let { p ->
             name = p.name; platform = p.platform; if (!p.notes.isNullOrBlank()) notes = p.notes!!
@@ -62,7 +70,39 @@ fun AddScreen(vm: AppViewModel, nav: NavHostController, playingId: Long = -1L) {
             Text("Add beaten game", color = Cream, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
 
-        Field("Game name", name) { name = it }
+        var igdbHits by remember { mutableStateOf<List<com.gc52.tracker.data.Igdb.Hit>>(emptyList()) }
+        var pickedName by remember { mutableStateOf("") }
+        val igdbOn by vm.igdbEnabled.collectAsState()
+        LaunchedEffect(name) {
+            if (!igdbOn || name.trim().length < 3 || name == pickedName) { igdbHits = emptyList(); return@LaunchedEffect }
+            kotlinx.coroutines.delay(400)
+            igdbHits = vm.searchIgdbFor(name) ?: emptyList()
+        }
+        Box {
+            Field("Game name", name) { name = it }
+            DropdownMenu(expanded = igdbHits.isNotEmpty(), onDismissRequest = { igdbHits = emptyList() },
+                properties = androidx.compose.ui.window.PopupProperties(focusable = false)) {
+                igdbHits.take(6).forEach { h ->
+                    DropdownMenuItem(
+                        text = {
+                            Column {
+                                Text(h.name + (h.year?.let { " ($it)" } ?: ""), fontSize = 15.sp)
+                                if (h.platforms.isNotEmpty())
+                                    Text(h.platforms.joinToString(" · ") { com.gc52.tracker.data.Igdb.mapPlatform(it) },
+                                        fontSize = 12.sp, color = Muted, maxLines = 1)
+                            }
+                        },
+                        onClick = {
+                            pickedName = h.name; name = h.name
+                            carriedIgdbId = h.id
+                            if (platform.isBlank())
+                                h.platforms.firstOrNull()?.let { platform = com.gc52.tracker.data.Igdb.mapPlatform(it) }
+                            igdbHits = emptyList()
+                        }
+                    )
+                }
+            }
+        }
         if (dups.isNotEmpty()) {
             Column(Modifier.fillMaxWidth().gradientCard().padding(12.dp)) {
                 Text("⚠ Possible duplicate:", color = Warn, fontWeight = FontWeight.Bold, fontSize = 16.sp)
@@ -88,8 +128,58 @@ fun AddScreen(vm: AppViewModel, nav: NavHostController, playingId: Long = -1L) {
             }
         }
 
-        Field("Year", year) { year = it.filter(Char::isDigit).take(4) }
-        Field("Date beaten", date) { date = it }
+        var showDate by remember { mutableStateOf(false) }
+        var showTime by remember { mutableStateOf(false) }
+        OutlinedTextField(
+            value = date, onValueChange = {}, readOnly = true, singleLine = true,
+            label = { Text("Date beaten (tap to pick)", color = Muted) },
+            modifier = Modifier.fillMaxWidth().clickable { showDate = true },
+            enabled = false,
+            colors = OutlinedTextFieldDefaults.colors(
+                disabledBorderColor = Muted.copy(alpha = 0.35f), disabledTextColor = Cream,
+                disabledLabelColor = Muted
+            )
+        )
+        if (showDate) {
+            val dpState = rememberDatePickerState(
+                initialSelectedDateMillis = runCatching {
+                    LocalDate.parse(date.take(10)).toEpochDay() * 86_400_000
+                }.getOrDefault(System.currentTimeMillis())
+            )
+            DatePickerDialog(
+                onDismissRequest = { showDate = false },
+                confirmButton = {
+                    TextButton(onClick = {
+                        dpState.selectedDateMillis?.let { ms ->
+                            val d = LocalDate.ofEpochDay(ms / 86_400_000)
+                            date = d.toString() + date.drop(10).ifBlank { " 00:00" }
+                        }
+                        showDate = false; showTime = true
+                    }) { Text("Next: time") }
+                },
+                dismissButton = { TextButton(onClick = { showDate = false }) { Text("Cancel") } }
+            ) { DatePicker(state = dpState) }
+        }
+        if (showTime) {
+            val parts = date.drop(11).split(":")
+            val tpState = rememberTimePickerState(
+                initialHour = parts.getOrNull(0)?.toIntOrNull() ?: 0,
+                initialMinute = parts.getOrNull(1)?.toIntOrNull() ?: 0,
+                is24Hour = true
+            )
+            AlertDialog(
+                onDismissRequest = { showTime = false },
+                title = { Text("Time beaten") },
+                text = { TimePicker(state = tpState) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        date = date.take(10) + " %02d:%02d".format(tpState.hour, tpState.minute)
+                        showTime = false
+                    }) { Text("Done") }
+                },
+                dismissButton = { TextButton(onClick = { showTime = false }) { Text("Skip (00:00)") } }
+            )
+        }
         Field("Notes", notes) { notes = it }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(checked = replay, onCheckedChange = { replay = it })

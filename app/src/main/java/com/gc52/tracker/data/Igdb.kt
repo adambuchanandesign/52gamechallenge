@@ -216,6 +216,54 @@ object Igdb {
         }
     }
 
+    /** Platform hints the user can type in a search ("alien vs predator snes").
+     *  key = phrase in the query (normalized), value = needle to find in IGDB platform names. */
+    val PLATFORM_HINTS: LinkedHashMap<String, String> = linkedMapOf(
+        "super nintendo" to "super nintendo", "snes" to "super nintendo",
+        "mega drive" to "mega drive", "megadrive" to "mega drive", "genesis" to "genesis",
+        "master system" to "master system", "game gear" to "game gear",
+        "sega cd" to "sega cd", "mega cd" to "sega cd", "32x" to "32x",
+        "saturn" to "saturn", "dreamcast" to "dreamcast",
+        "commodore 64" to "c64", "c64" to "c64", "amiga" to "amiga",
+        "spectrum" to "zx spectrum", "cpc" to "amstrad", "msx" to "msx", "dos" to "dos",
+        "nintendo 64" to "nintendo 64", "n64" to "nintendo 64",
+        "gamecube" to "gamecube", "wii u" to "wii u", "wiiu" to "wii u", "wii" to "wii",
+        "switch" to "switch", "famicom disk" to "family computer disk", "fds" to "family computer disk",
+        "famicom" to "family computer", "nes" to "nintendo entertainment system",
+        "game boy advance" to "game boy advance", "gba" to "game boy advance",
+        "game boy color" to "game boy color", "gbc" to "game boy color", "game boy" to "game boy",
+        "gb" to "game boy", "3ds" to "3ds", "ds" to "nintendo ds",
+        "psx" to "playstation", "ps1" to "playstation", "ps2" to "playstation 2",
+        "ps3" to "playstation 3", "ps4" to "playstation 4", "ps5" to "playstation 5",
+        "psp" to "psp", "vita" to "vita", "playstation" to "playstation",
+        "xbox 360" to "xbox 360", "360" to "xbox 360", "xbox one" to "xbox one",
+        "series x" to "series", "xbox" to "xbox",
+        "neo geo" to "neo geo", "neogeo" to "neo geo",
+        "pc engine" to "pc engine", "pce" to "pc engine", "turbografx" to "turbografx",
+        "wonderswan" to "wonderswan", "3do" to "3do", "x68000" to "x68000",
+        "lynx" to "lynx", "arcade" to "arcade", "bbc" to "bbc", "atari st" to "atari st"
+    )
+
+    data class ParsedQuery(val name: String, val platformNeedle: String?)
+
+    /** Pulls a trailing/embedded platform hint out of a search query. */
+    fun parseQuery(raw: String): ParsedQuery {
+        val norm = " " + raw.lowercase().replace(Regex("[^a-z0-9 ]"), " ")
+            .replace(Regex(" +"), " ").trim() + " "
+        for ((phrase, needle) in PLATFORM_HINTS) {
+            val token = " $phrase "
+            if (norm.contains(token)) {
+                val cleaned = norm.replace(token, " ").trim()
+                if (cleaned.isNotBlank()) return ParsedQuery(cleaned, needle)
+            }
+        }
+        return ParsedQuery(raw.trim(), null)
+    }
+
+    /** True if any of the hit's platforms matches the needle. */
+    fun hitMatchesPlatform(platforms: List<String>, needle: String): Boolean =
+        platforms.any { it.lowercase().contains(needle) }
+
     /** Best-effort IGDB platform name -> the user's platform naming. */
     fun mapPlatform(igdb: String): String = when (igdb) {
         "Super Nintendo Entertainment System" -> "Nintendo SNES"

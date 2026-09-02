@@ -139,9 +139,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 if (!igdbEnabled.value) { igdbUi.value = IgdbUi.Off; return@collectLatest }
                 if (q.length < 2) { igdbUi.value = IgdbUi.Idle; return@collectLatest }
                 igdbUi.value = IgdbUi.Loading
-                val hits = kotlinx.coroutines.withContext(Dispatchers.IO) { Igdb.search(getApplication(), q) }
-                if (hits == null) igdbUi.value = IgdbUi.Error
+                val parsed = Igdb.parseQuery(q)
+                val raw = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                    Igdb.search(getApplication(), parsed.name)
+                }
+                if (raw == null) igdbUi.value = IgdbUi.Error
                 else {
+                    // a typed platform hint ("paperboy c64") floats matching versions to the top
+                    val hits = parsed.platformNeedle?.let { needle ->
+                        raw.sortedByDescending { Igdb.hitMatchesPlatform(it.platforms, needle) }
+                    } ?: raw
                     lastIgdbQuery = q; lastIgdbHits = hits
                     igdbUi.value = IgdbUi.Loaded(q, hits)
                 }
@@ -361,6 +368,68 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         enrichJob?.cancel()
         enrichState.value = enrichState.value.copy(running = false)
     }
+    // ---- reordering within a year ----
+    suspend fun gamesOfYear(year: Int): List<Game> =
+        kotlinx.coroutines.withContext(Dispatchers.IO) {
+            dao.allOnce().filter { it.year == year }.sortedBy { it.seq }
+        }
+
+    /** Renumber a year to the given id order; image files are renamed to match. */
+    suspend fun applyReorder(year: Int, orderedIds: List<Long>): Boolean =
+        kotlinx.coroutines.withContext(Dispatchers.IO) {
+            try {
+                val byId = dao.allOnce().filter { it.year == year }.associateBy { it.id }
+                val moves = ArrayList<Triple<Game, Int, String?>>()  // game, newSeq, finalImageName
+                orderedIds.forEachIndexed { i, id ->
+                    val g = byId[id] ?: return@withContext false
+                    val newSeq = i + 1
+                    val newImage = g.imageFile?.let { old ->
+                        val ext = old.substringAfterLast('.', "jpg")
+                        Storage.collageFileName(year, newSeq, g.name, g.platform, ext)
+                    }
+                    if (newSeq != g.seq || (newImage != null && newImage != g.imageFile))
+                        moves.add(Triple(g, newSeq, newImage))
+                }
+                val app = getApplication<android.app.Application>()
+                // phase 1: park changing files under temp names so swaps can't collide
+                moves.forEach { (g, _, newImage) ->
+                    if (g.imageFile != null && newImage != null && newImage != g.imageFile)
+                        Storage.renameInYear(app, year, g.imageFile, "reorder-tmp-${g.id}." +
+                            g.imageFile.substringAfterLast('.', "jpg"))
+                }
+                // phase 2: temp -> final, then persist
+                moves.forEach { (g, newSeq, newImage) ->
+                    var finalImage = g.imageFile
+                    if (g.imageFile != null && newImage != null && newImage != g.imageFile) {
+                        val tmp = "reorder-tmp-${g.id}." + g.imageFile.substringAfterLast('.', "jpg")
+                        finalImage = if (Storage.renameInYear(app, year, tmp, newImage)) newImage
+                            else g.imageFile  // rename failed; keep the old reference
+                    }
+                    dao.update(g.copy(seq = newSeq, imageFile = finalImage))
+                }
+                true
+            } catch (e: Exception) { false }
+        }
+
+    /** Apply an explicitly chosen IGDB match to a beaten game. */
+    suspend fun applyIgdbChoice(g: Game, hitId: Long): Game? {
+        val d = kotlinx.coroutines.withContext(Dispatchers.IO) {
+            Igdb.detailsById(getApplication(), hitId)
+        } ?: return null
+        val updated = enrichedCopy(g.copy(igdbId = hitId), d)
+        kotlinx.coroutines.withContext(Dispatchers.IO) { dao.update(updated) }
+        detailsCache.remove(g.name); detailsCache.remove("#${g.igdbId}"); detailsCache.remove("#$hitId")
+        return updated
+    }
+    suspend fun searchIgdbFor(name: String): List<Igdb.Hit>? =
+        kotlinx.coroutines.withContext(Dispatchers.IO) {
+            val parsed = Igdb.parseQuery(name)
+            val raw = Igdb.search(getApplication(), parsed.name, 10) ?: return@withContext null
+            parsed.platformNeedle?.let { needle ->
+                raw.sortedByDescending { Igdb.hitMatchesPlatform(it.platforms, needle) }
+            } ?: raw
+        }
+
     /** Force re-fetch IGDB data for one game, overwriting whatever is stored. */
     suspend fun refreshIgdb(g: Game): Game? {
         if (!igdbEnabled.value) return null

@@ -1,5 +1,6 @@
 package com.gc52.tracker.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -19,6 +20,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
 import com.gc52.tracker.AppViewModel
@@ -50,13 +53,19 @@ fun DetailScreen(vm: AppViewModel, nav: NavHostController, id: Long) {
         }
     }
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
+    val scroll = rememberScrollState()
+    var editFormY by remember { mutableStateOf(0) }
+    val pageScope = rememberCoroutineScope()
+    Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { nav.popBackStack() }) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Muted)
             }
             Spacer(Modifier.weight(1f))
-            IconButton(onClick = { editing = !editing }) { Icon(Icons.Filled.Edit, "Edit", tint = LogoBlueLight) }
+            IconButton(onClick = {
+                editing = !editing
+                if (editing) pageScope.launch { kotlinx.coroutines.delay(120); scroll.animateScrollTo(editFormY) }
+            }) { Icon(Icons.Filled.Edit, "Edit", tint = LogoBlueLight) }
             IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Filled.Delete, "Delete", tint = Warn) }
         }
 
@@ -122,13 +131,19 @@ fun DetailScreen(vm: AppViewModel, nav: NavHostController, id: Long) {
 
         if (editing) {
             Spacer(Modifier.height(14.dp))
-            EditForm(g) { updated -> vm.update(updated) { }; game = updated; editing = false }
+            Column(Modifier.onGloballyPositioned { editFormY = it.positionInParent().y.toInt() }) {
+                EditForm(g) { updated -> vm.update(updated) { }; game = updated; editing = false }
+                TextButton(onClick = { nav.navigate("reorder/" + g.year) }) {
+                    Text("Change order within ${g.year}…", color = LogoBlueLight)
+                }
+            }
         }
 
         // IGDB info block (shared component - same layout as Now Playing / Backlog)
         Spacer(Modifier.height(12.dp))
         com.gc52.tracker.IgdbAboutBlock(vm, g.name, g.igdbId)
         var refreshMsg by remember { mutableStateOf<String?>(null) }
+        var showChooser by remember { mutableStateOf(false) }
         val refreshScope = rememberCoroutineScope()
         Row(verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = {
@@ -139,7 +154,55 @@ fun DetailScreen(vm: AppViewModel, nav: NavHostController, id: Long) {
                     else refreshMsg = "No IGDB match found for this name"
                 }
             }) { Text("Refresh IGDB data", color = Muted, fontSize = 14.sp) }
+            TextButton(onClick = { showChooser = true }) { Text("Choose match…", color = Muted, fontSize = 14.sp) }
             refreshMsg?.let { Text(it, color = if (it.startsWith("IGDB")) Good else Muted, fontSize = 13.sp) }
+        }
+        if (showChooser) {
+            var hits by remember { mutableStateOf<List<com.gc52.tracker.data.Igdb.Hit>?>(null) }
+            LaunchedEffect(Unit) { hits = vm.searchIgdbFor(g.name) }
+            AlertDialog(
+                onDismissRequest = { showChooser = false },
+                title = { Text("Which game is this?") },
+                text = {
+                    Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        when {
+                            hits == null -> Text("Searching IGDB…")
+                            hits!!.isEmpty() -> Text("No matches found for this name.")
+                            else -> hits!!.forEach { h ->
+                                Row(
+                                    Modifier.fillMaxWidth()
+                                        .clickable {
+                                            showChooser = false
+                                            refreshMsg = "Applying…"
+                                            pageScope.launch {
+                                                val u = vm.applyIgdbChoice(g, h.id)
+                                                if (u != null) { game = u; refreshMsg = "IGDB match updated ✓" }
+                                                else refreshMsg = "Couldn't fetch that entry"
+                                            }
+                                        }
+                                        .padding(vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    if (h.coverUrl != null) {
+                                        AsyncImage(model = h.coverUrl, contentDescription = null,
+                                            modifier = Modifier.size(width = 38.dp, height = 50.dp)
+                                                .clip(RoundedCornerShape(4.dp)))
+                                        Spacer(Modifier.width(10.dp))
+                                    }
+                                    Column {
+                                        Text(h.name + (h.year?.let { " ($it)" } ?: ""), fontSize = 15.sp)
+                                        if (h.platforms.isNotEmpty())
+                                            Text(h.platforms.joinToString(" · ") { com.gc52.tracker.data.Igdb.mapPlatform(it) },
+                                                fontSize = 12.sp, color = Muted, maxLines = 2)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = { TextButton(onClick = { showChooser = false }) { Text("Cancel") } }
+            )
         }
         Spacer(Modifier.height(24.dp))
     }

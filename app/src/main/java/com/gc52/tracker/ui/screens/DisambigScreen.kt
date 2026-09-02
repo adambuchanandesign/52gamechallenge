@@ -43,7 +43,7 @@ fun DisambigScreen(vm: AppViewModel, nav: NavHostController, mode: String = "pla
                 IconButton(onClick = { nav.popBackStack() }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Muted)
                 }
-                H1(if (mode == "backlog") "Add to Backlog" else "Add to Now playing")
+                H1("Add game")
             }
         }
         item { BeatenSearch(vm) }

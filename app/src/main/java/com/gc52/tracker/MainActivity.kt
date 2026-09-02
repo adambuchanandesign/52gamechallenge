@@ -129,6 +129,10 @@ fun AppNav(nav: NavHostController) {
                     BacklogDetailScreen(vm, nav, id)
                 }
                 composable("random") { RandomScreen(vm, nav) }
+                composable("reorder/{year}") { back ->
+                    val y = back.arguments?.getString("year")?.toIntOrNull() ?: return@composable
+                    ReorderScreen(vm, nav, y)
+                }
                 composable("playingdetail/{id}") { back ->
                     val id = back.arguments?.getString("id")?.toLongOrNull() ?: return@composable
                     PlayingDetailScreen(vm, nav, id)

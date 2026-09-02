@@ -67,7 +67,7 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
 
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                NavButton(Modifier.weight(1f), "Add beaten", Icons.Filled.Add) { nav.navigate("add") }
+                NavButton(Modifier.weight(1f), "Add Game", Icons.Filled.Add) { nav.navigate("disambig") }
                 NavButton(Modifier.weight(1f), "Browse games", Icons.AutoMirrored.Filled.List) { nav.navigate("games") }
             }
         }
